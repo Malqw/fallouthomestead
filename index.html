@@ -168,6 +168,18 @@
   .music-volume-row input[type=range]{ flex:1; accent-color:var(--green); }
   #globalEditModeLabel input{ accent-color:var(--amber); }
 
+  /* ---- Squad toolbar "⋮ Действия" menu: bundles the less-frequent actions (save/load JSON,
+     print, clear roster) out of the always-visible toolbar row, same collapsible-panel pattern
+     as the music player above. ---- */
+  .squad-more-menu{
+    display:none; flex-direction:column; gap:6px;
+    position:absolute; top:100%; right:0; z-index:150; margin-top:4px;
+    min-width:200px; background:#0b2415; border:1px solid var(--green); border-radius:4px;
+    padding:10px; box-shadow:0 4px 20px rgba(0,0,0,0.6);
+  }
+  .squad-more-menu.open{ display:flex; }
+  .squad-more-menu button{ width:100%; text-align:left; margin:0; }
+
   /* ---- Card art viewer: the small 🃏 icon next to a unit/item/perk that has scanned card art
      (see cardBtnHtml() / UNIT_CARD_BY_NAME etc.) opens #cardLightbox with that image — or several
      side by side for combo entries like "Frank Horrigan I+II" that just show both minis' cards.
@@ -621,12 +633,21 @@ function enhanceCombos(root){
       list.style.top = (r.bottom + 2) + 'px';
       list.style.width = r.width + 'px';
     }
+    // Closing used to happen on the input's blur — but on mobile, dismissing the on-screen
+    // keyboard (to see the list full-screen instead of squeezed above it) *also* blurs the
+    // input, so the list vanished right when you'd want it to stay open. Closing on a genuine
+    // tap/click outside the combo (input + list) instead means the keyboard can come and go
+    // freely without touching the list.
+    function outsideCloseHandler(e){
+      if(list && !wrap.contains(e.target) && !list.contains(e.target)) closeList();
+    }
     function closeList(){
       if(!list) return;
       list.remove();
       list = null;
       window.removeEventListener('scroll', reposition, true);
       window.removeEventListener('resize', reposition);
+      document.removeEventListener('pointerdown', outsideCloseHandler, true);
     }
     function renderList(filterText){
       const q = (filterText || '').trim().toLowerCase();
@@ -638,6 +659,7 @@ function enhanceCombos(root){
         reposition();
         window.addEventListener('scroll', reposition, true);
         window.addEventListener('resize', reposition);
+        document.addEventListener('pointerdown', outsideCloseHandler, true);
       }
       if(!filtered.length){
         list.innerHTML = `<div class="combo-empty">Ничего не найдено</div>`;
@@ -670,7 +692,6 @@ function enhanceCombos(root){
 
     input.addEventListener('focus', ()=> renderList(''));
     input.addEventListener('input', ()=> renderList(input.value));
-    input.addEventListener('blur', ()=> setTimeout(closeList, 150));
     input.addEventListener('keydown', (e)=>{
       if(e.key === 'Escape'){ closeList(); input.blur(); return; }
       if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
@@ -3001,9 +3022,9 @@ function printSquadRoster(){
       .p-badge-bad{ background:#111; color:#fff; }
       .p-unit-row{ display:flex; gap:10px; align-items:flex-start; }
       .p-unit-imgcol{ display:flex; flex-direction:column; gap:0; flex:0 0 auto; }
-      .p-unit-img{ width:150px; height:auto; max-height:220px; object-fit:contain; display:block; }
+      .p-unit-img{ width:130px; height:auto; max-height:190px; object-fit:contain; display:block; }
       .p-unit-img.p-noimg{ border:1px dashed #999; font-size:10px; display:flex; align-items:center;
-        justify-content:center; text-align:center; padding:4px; box-sizing:border-box; width:150px; height:210px; }
+        justify-content:center; text-align:center; padding:4px; box-sizing:border-box; width:130px; height:182px; }
       /* Exactly 8 cards per row (repeat(8, 1fr) — not an auto-fill count that depends on how much
          page width happens to be left) — once a 9th card shows up it starts a new row of 8, same
          as the reference layout the user pointed at. Every box is the same size regardless of
@@ -3719,22 +3740,17 @@ function renderSquadView(){
     </div>
     <span class="squad-total">Бойцов: ${members.length} · Caps отряда: ${totalCaps}</span>
     <span class="squad-total mission-total">На миссию: ${missionMembers.length} · Caps: ${missionCaps}</span>
-    <button id="btnSaveJsonSquad">⭳ Скачать JSON</button>
-    <button id="btnLoadJsonSquad">⭱ Загрузить JSON</button>
-    <input type="file" id="fileLoadJsonSquad" accept="application/json" style="display:none">
-    <button id="btnExportWW" title="Открыть отряд в фанатском билдере achapin.github.io/wastelandworkshop (для печати карточек)">⇗ Wasteland Workshop</button>
-    <button id="btnPrintSquad" title="Печатная раскладка ростера: карточки юнитов и предметов вместо текста">🖨 Печать состава</button>
-    <button class="danger" id="btnClearSquad">Очистить ростер</button>
-  </div>
-  <div class="hint" style="margin-bottom:14px;">
-    Цифровая копия Survival Mode Roster (FWW: Homestead, стр.27-29): Unit/Name/Leader, состояния
-    Poisoned/Injured Arm/Injured Leg, Regular Damage/Radiation, Addiction, Fate, Perks, счётчики
-    Battles/Removed. Миссия/Items/Caps — собственное дополнение поверх бланка (юниты/предметы/перки —
-    из справочника Frontier Factions). Items у бойца — только то, что реально лежит на складе или
-    сейчас числится за другим бойцом (вкладка "Склад"), если только не включён режим редактирования —
-    тогда в списке появляется весь каталог предметов, чтобы сразу собрать юнита при заводе отряда в
-    начале игры, без предварительного складирования. Правила расчёта Caps по книге (лимиты Perks,
-    эффекты Rest/Fate и т.п.) здесь не автоматизированы — заполняйте и считайте вручную по правилам.
+    <div class="squad-more" style="position:relative;">
+      <button id="btnSquadMore" type="button">⋮ Действия</button>
+      <div class="squad-more-menu" id="squadMoreMenu">
+        <button id="btnSaveJsonSquad">⭳ Скачать JSON</button>
+        <button id="btnLoadJsonSquad">⭱ Загрузить JSON</button>
+        <input type="file" id="fileLoadJsonSquad" accept="application/json" style="display:none">
+        <button id="btnExportWW" style="display:none" title="Открыть отряд в фанатском билдере achapin.github.io/wastelandworkshop (для печати карточек)">⇗ Wasteland Workshop</button>
+        <button id="btnPrintSquad" title="Печатная раскладка ростера: карточки юнитов и предметов вместо текста">🖨 Печать состава</button>
+        <button class="danger" id="btnClearSquad">Очистить ростер</button>
+      </div>
+    </div>
   </div>
   <div class="squad-grid">
   `;
@@ -3927,6 +3943,15 @@ function attachSquadEvents(){
     };
   }
 
+  const btnSquadMore = document.getElementById('btnSquadMore');
+  const squadMoreMenu = document.getElementById('squadMoreMenu');
+  if(btnSquadMore && squadMoreMenu){
+    btnSquadMore.onclick = ()=> squadMoreMenu.classList.toggle('open');
+    squadMoreMenu.querySelectorAll('button').forEach(b=>{
+      b.addEventListener('click', ()=> squadMoreMenu.classList.remove('open'));
+    });
+  }
+
   wrap.querySelectorAll('[data-field]').forEach(el=>{
     const id = Number(el.dataset.member);
     const field = el.dataset.field;
@@ -4109,8 +4134,31 @@ function setupStageGestures(){
 const MUSIC_TRACKS = [{"file": "Concerto For 2 Vl Str In D Minor.mp3", "title": "Concerto For 2 Vl Str In D Minor"}, {"file": "Dean Martin - Ain't That A Kick In the Head.mp3", "title": "Dean Martin - Ain't That A Kick In the Head"}, {"file": "Eddy Arnold - It's A Sin.mp3", "title": "Eddy Arnold - It's A Sin"}, {"file": "Fallout - American Swing.mp3", "title": "Fallout - American Swing"}, {"file": "Fallout - bingo bango bongo.mp3", "title": "Fallout - bingo bango bongo"}, {"file": "Fallout - MUS_Cobwebs_and_Rainbows.mp3", "title": "Fallout - MUS_Cobwebs_and_Rainbows"}, {"file": "fallout song1.mp3", "title": "fallout song1"}, {"file": "Fallout song2.mp3", "title": "Fallout song2"}, {"file": "Frank Sinatra - Blue Moon.mp3", "title": "Frank Sinatra - Blue Moon"}, {"file": "Gabriel Pares - Blues For You.mp3", "title": "Gabriel Pares - Blues For You"}, {"file": "Gerhard Trede - American Swing.mp3", "title": "Gerhard Trede - American Swing"}, {"file": "Gerhard Trede - Fox Boogie.mp3", "title": "Gerhard Trede - Fox Boogie"}, {"file": "Ink Spots  - I Don't Want To Set The World.mp3", "title": "Ink Spots  - I Don't Want To Set The World"}, {"file": "J.E. Sawyer - Cobwebs and Rainbows.mp3", "title": "J.E. Sawyer - Cobwebs and Rainbows"}, {"file": "Marty Robbins - Big Iron.mp3", "title": "Marty Robbins - Big Iron"}, {"file": "Presidental - Inon Zur.mp3", "title": "Presidental - Inon Zur"}, {"file": "Roy Brown - Mighty Mighty Man .mp3", "title": "Roy Brown - Mighty Mighty Man "}];
 let musicTracks = [];
 let musicIndex = 0;
+let musicVolume = 0.6;
 const musicAudio = new Audio();
 musicAudio.preload = 'none';
+
+// iOS Safari hard-ignores audio.volume by design (it wants the hardware buttons to be the only
+// volume control) — the slider looks like it does nothing there. Routing playback through a
+// WebAudio GainNode instead works around that on every platform, iOS included. Falls back to
+// plain audio.volume if WebAudio isn't available at all. Must be created after a user gesture
+// (autoplay policy), so this is lazily set up from toggleMusicPlay() rather than at load time.
+let musicAudioCtx = null, musicGainNode = null;
+function ensureMusicAudioGraph(){
+  if(musicAudioCtx) return;
+  try{
+    musicAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = musicAudioCtx.createMediaElementSource(musicAudio);
+    musicGainNode = musicAudioCtx.createGain();
+    musicGainNode.gain.value = musicVolume;
+    source.connect(musicGainNode).connect(musicAudioCtx.destination);
+  }catch(e){ musicAudioCtx = null; musicGainNode = null; }
+}
+function setMusicVolume(v){
+  musicVolume = v;
+  if(musicGainNode) musicGainNode.gain.value = v; else musicAudio.volume = v;
+  localStorage.setItem('homestead-music-volume', String(v));
+}
 
 function updateMusicUI(){
   const nameEl = document.getElementById('musicTrackName');
@@ -4135,6 +4183,8 @@ function loadMusicTrack(i, autoplay){
 }
 function toggleMusicPlay(){
   if(!musicTracks.length) return;
+  ensureMusicAudioGraph();
+  if(musicAudioCtx && musicAudioCtx.state === 'suspended') musicAudioCtx.resume();
   if(!musicAudio.src){ loadMusicTrack(musicIndex, true); return; }
   if(musicAudio.paused) musicAudio.play().catch(()=>{}); else musicAudio.pause();
 }
@@ -4146,9 +4196,10 @@ musicAudio.addEventListener('ended', musicNext);
 
 function initMusicPlayer(){
   const savedVol = localStorage.getItem('homestead-music-volume');
-  musicAudio.volume = savedVol !== null ? Number(savedVol) : 0.6;
+  musicVolume = savedVol !== null ? Number(savedVol) : 0.6;
+  musicAudio.volume = musicVolume; // harmless baseline; the GainNode (once created) is what actually rules once playback starts
   const volSlider = document.getElementById('musicVolume');
-  if(volSlider) volSlider.value = Math.round(musicAudio.volume * 100);
+  if(volSlider) volSlider.value = Math.round(musicVolume * 100);
   musicTracks = MUSIC_TRACKS;
   const savedIndex = Number(localStorage.getItem('homestead-music-index'));
   if(Number.isInteger(savedIndex) && savedIndex >= 0 && savedIndex < musicTracks.length) musicIndex = savedIndex;
@@ -4183,9 +4234,7 @@ function initMusicPlayer(){
   document.getElementById('musicPrevBtn')?.addEventListener('click', musicPrev);
   document.getElementById('musicNextBtn')?.addEventListener('click', musicNext);
   document.getElementById('musicVolume')?.addEventListener('input', e=>{
-    const v = Number(e.target.value) / 100;
-    musicAudio.volume = v;
-    localStorage.setItem('homestead-music-volume', String(v));
+    setMusicVolume(Number(e.target.value) / 100);
   });
   initMusicPlayer();
   // Card art lightbox: one delegated listener covers every 🃏 button ever rendered (squad cards,
