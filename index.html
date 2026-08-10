@@ -2995,6 +2995,15 @@ function buildPrintSquadHtml(){
       }
       return html;
     }).join('');
+    // Robot/Creature "unit mods" (memberModSlot) are a separate slot from item-attached mods
+    // above — see "Моды юнита" in the builder — but still just ITEMS_DB entries under the hood.
+    if(memberModSlot){
+      cardsHtml += (m.mods||[]).map(modId=>{
+        const modInst = state.warehouse.items[modId];
+        const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
+        return modIt ? printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME) : '';
+      }).join('');
+    }
 
     return `<div class="p-unit">
       <div class="p-unit-name">#${m.id} ${m.name ? m.name+' — ' : ''}${unitName}${m.leader?' ★ Leader':''}${m.mission?' ⚑':''}</div>
@@ -3866,7 +3875,7 @@ function renderSquadView(){
         ${(m.mods||[]).map(modId=>{
           const modInst = state.warehouse.items[modId];
           const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
-          return `<span class="tag">${modIt?modIt[2]:'?'} (${modIt?modIt[3]:0}) <b data-detachmembermod="${m.id}" data-modinst="${modId}">✕</b></span>`;
+          return `<span class="tag">${modIt?modIt[2]:'?'} (${modIt?modIt[3]:0}) ${cardBtnHtml(modIt?modIt[2]:'', ITEM_CARD_BY_NAME)} <b data-detachmembermod="${m.id}" data-modinst="${modId}">✕</b></span>`;
         }).join('') || '<span class="small-note">нет</span>'}
       </div>
       ${(m.mods||[]).length < getModCapForUnit(m.unitIdx) ? `
