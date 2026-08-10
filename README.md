@@ -1,4 +1,4 @@
-# Homestead Builder (статическая версия — GitHub Pages / Netlify)
+# Homestead Builder
 
 Фанатский билдер под аддон настольной игры Fallout Wasteland Warfare / Homestead 
 
