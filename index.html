@@ -3016,7 +3016,7 @@ function buildPrintSquadHtml(mode){
     ? `<div class="p-cost-header">На миссию: ${missionCaps} caps &middot; Весь отряд: ${allMembers.reduce((s,m)=>s+capsForMember(m),0)} caps</div>`
     : `<div class="p-cost-header">Стоимость отряда: ${missionCaps} caps</div>`;
 
-  const unitsHtml = members.map(m=>{
+  const unitCards = members.map(m=>{
     const unit = (m.unitIdx!==null && m.unitIdx!==undefined) ? UNITS_DB[m.unitIdx] : null;
     const unitName = unit ? unit[1] : '?';
     const heldItems = itemsHeldBy(m.id).filter(inst=>!isModIdx(inst.itemIdx));
@@ -3098,7 +3098,16 @@ function buildPrintSquadHtml(mode){
         <div class="p-items-grid">${cardsHtml || '<span class="p-hint">нет предметов/перков</span>'}</div>
       </div>
     </div>`;
-  }).join('');
+  });
+
+  // Force exactly 2 members per printed page (page-break-after on every pair) instead of letting
+  // them naturally reflow to fit as many as the page height allows at this card size — otherwise
+  // up to 4 fit on one page and there's no headroom left to size the item/perk grid up.
+  const pageChunks = [];
+  for(let i=0; i<unitCards.length; i+=2) pageChunks.push(unitCards.slice(i, i+2));
+  const unitsHtml = pageChunks.map((pair,pi)=>
+    `<div class="p-unit-page"${pi < pageChunks.length-1 ? ' style="page-break-after:always;"' : ''}>${pair.join('')}</div>`
+  ).join('');
 
   // Faction rule card + any Force Reference cards go on one shared page after all the unit
   // cards (faction first, then references) — same content as wastelandworkshop shows, just all
@@ -3111,7 +3120,7 @@ function buildPrintSquadHtml(mode){
     ? `<div class="p-refpage">${pageFiles.map(([f,title])=>`<img src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="${title}">`).join('')}</div>`
     : '';
 
-  return costHeaderHtml + `<div class="p-unit-grid">${unitsHtml}</div>` + refPageHtml;
+  return costHeaderHtml + unitsHtml + refPageHtml;
 }
 function printSquadRoster(mode){
   const html = buildPrintSquadHtml(mode);
@@ -3122,10 +3131,10 @@ function printSquadRoster(mode){
     <style>
       @page{ size:a4 landscape; margin:8mm; }
       body{ font-family:'Courier New', monospace; padding:0; color:#111; background:#fff; }
-      /* Two members side by side per page instead of one long stacked column — lets each unit's
-         portrait/item cards print bigger than a full-width layout would allow at this same page
-         size (see .p-unit-img/.p-items-grid below). */
-      .p-unit-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 18px; }
+      /* Exactly two members side by side per page (page-break-after is set in JS on every other
+         .p-unit-page) instead of one long stacked column or a naturally-reflowing grid that could
+         fit 4 at this card size and leave no headroom for the item grid. */
+      .p-unit-page{ display:grid; grid-template-columns:1fr 1fr; gap:0 18px; }
       .p-unit{ break-inside:avoid; border-bottom:1px solid #ccc; padding:6px 0; margin-bottom:4px; }
       .p-unit-name{ font-weight:bold; font-size:15px; margin-bottom:4px; }
       .p-badges{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:5px; }
@@ -3136,12 +3145,13 @@ function printSquadRoster(mode){
       .p-unit-img{ width:175px; height:auto; max-height:255px; object-fit:contain; display:block; }
       .p-unit-img.p-noimg{ border:1px dashed #999; font-size:12px; display:flex; align-items:center;
         justify-content:center; text-align:center; padding:4px; box-sizing:border-box; width:175px; height:245px; }
-      /* 4 cards per row (repeat(4, 1fr) — not an auto-fill count that depends on how much page
-         width happens to be left) — once a 5th card shows up it starts a new row of 4. Every box
+      /* 3 cards per row (repeat(3, 1fr) — not an auto-fill count that depends on how much page
+         width happens to be left) — once a 4th card shows up it starts a new row of 3. Every box
          is the same size regardless of whether that particular card scan is portrait or
          landscape, so the grid stays even. Fewer columns than a full-width layout would use since
-         each unit only gets half the page (see .p-unit-grid). */
-      .p-items-grid{ flex:1; display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; align-content:start; }
+         each unit only gets half the page (see .p-unit-page) - fixing the page to exactly 2
+         members means there's plenty of vertical room for extra rows, so cards can print bigger. */
+      .p-items-grid{ flex:1; display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; align-content:start; }
       .p-item-box{ position:relative; aspect-ratio:3/2; display:flex; align-items:center; justify-content:center; overflow:hidden; }
       .p-item-img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
       .p-item-box.p-noimg{ border:1px dashed #999; font-size:10px; text-align:center; padding:2px; box-sizing:border-box; }
