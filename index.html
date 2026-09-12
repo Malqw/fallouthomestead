@@ -2956,10 +2956,14 @@ function printCardImgHtml(name, cardMap, cls, cost){
 // Item/perk/mod cards sit in a fixed 8-per-row grid (see .p-items-grid) — each gets wrapped in a
 // same-size box so a landscape perk card and a portrait item card still occupy identical grid
 // cells; printCardImgHtml above stays as-is for the big unit portrait, which doesn't need that.
-function printCardBoxHtml(name, cardMap, cost){
+function printCardBoxHtml(name, cardMap, cost, isPowerArmor){
   const val = cardMap[name];
   const files = val ? (Array.isArray(val) ? val : [val]) : [];
-  const badge = (cost===undefined || cost===null) ? '' : `<span class="p-cost-badge">${cost}</span>`;
+  // Power Armor cards have their own stat-block layout with a blank slot baked into the art (in
+  // the banner, right of the name) instead of a free corner — see the reference screenshot this
+  // was set from — so that one card shape gets its own badge position/class.
+  const badgeCls = 'p-cost-badge' + (isPowerArmor ? ' p-cost-badge-armor' : '');
+  const badge = (cost===undefined || cost===null) ? '' : `<span class="${badgeCls}">${cost}</span>`;
   if(!files.length) return `<div class="p-item-box p-noimg">${name}${badge}</div>`;
   return files.map(f=>`<div class="p-item-box"><img class="p-item-img" src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="${name}">${badge}</div>`).join('');
 }
@@ -3045,11 +3049,11 @@ function buildPrintSquadHtml(mode){
     cardsHtml += heldItems.map(inst=>{
       const it = ITEMS_DB[inst.itemIdx];
       if(!it) return '';
-      let html = printCardBoxHtml(it[2], ITEM_CARD_BY_NAME, it[3]);
+      let html = printCardBoxHtml(it[2], ITEM_CARD_BY_NAME, it[3], it[1]==='Power Armor');
       if(inst.modInstId){
         const modInst = state.warehouse.items[inst.modInstId];
         const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
-        if(modIt) html += printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3]);
+        if(modIt) html += printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3], modIt[1]==='Power Armor');
       }
       return html;
     }).join('');
@@ -3114,8 +3118,11 @@ function printSquadRoster(mode){
       .p-item-img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
       .p-item-box.p-noimg{ border:1px dashed #999; font-size:8px; text-align:center; padding:2px; box-sizing:border-box; }
       .p-cardwrap{ position:relative; display:inline-block; }
-      .p-cost-badge{ position:absolute; top:2px; right:2px; background:#111; color:#fff; font-size:10px;
-        font-weight:bold; padding:1px 5px; border-radius:3px; line-height:1.4; font-family:'Courier New', monospace; }
+      .p-cost-badge{ position:absolute; top:2px; right:2px; background:#111; color:#fff; font-size:8px;
+        font-weight:bold; padding:1px 4px; border-radius:2px; line-height:1.3; font-family:'Courier New', monospace; }
+      /* Power Armor cards print a blank slot into the art itself, right of the name in the
+         banner (~50% down, near the right edge) — drop the badge there instead of the corner. */
+      .p-cost-badge.p-cost-badge-armor{ top:50%; right:9%; left:auto; transform:translateY(-50%); }
       .p-hint{ font-size:11px; color:#888; }
       .p-cost-header{ font-size:13px; font-weight:bold; margin-bottom:8px; }
       .p-refpage{ page-break-before:always; display:flex; align-items:center; justify-content:center;
