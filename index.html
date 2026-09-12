@@ -3059,18 +3059,18 @@ function buildPrintSquadHtml(){
     </div>`;
   }).join('');
 
-  // Faction rule card + any Force Reference cards go after all the unit cards, each on its own
-  // printed page — same content as wastelandworkshop shows, just at the end instead of the front.
+  // Faction rule card + any Force Reference cards go on one shared page after all the unit
+  // cards (faction first, then references) — same content as wastelandworkshop shows, just all
+  // together at the end instead of the faction card alone up front.
   const faction = squadPrimaryFaction(members);
   const factionFile = faction && FACTION_CARD_BY_NAME[faction];
-  const factionHtml = factionFile
-    ? `<div class="p-refpage"><img src="${new URL('cards-web/'+encodeURIComponent(factionFile), location.href).href}" title="${faction}"></div>`
+  const refFiles = squadForceReferenceFiles(members);
+  const pageFiles = [...(factionFile ? [[factionFile, faction]] : []), ...refFiles.map(f=>[f, 'Force Reference'])];
+  const refPageHtml = pageFiles.length
+    ? `<div class="p-refpage">${pageFiles.map(([f,title])=>`<img src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="${title}">`).join('')}</div>`
     : '';
-  const refHtml = squadForceReferenceFiles(members)
-    .map(f=>`<div class="p-refpage"><img src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="Force Reference"></div>`)
-    .join('');
 
-  return unitsHtml + factionHtml + refHtml;
+  return unitsHtml + refPageHtml;
 }
 function printSquadRoster(){
   const html = buildPrintSquadHtml();
@@ -3100,8 +3100,9 @@ function printSquadRoster(){
       .p-item-img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
       .p-item-box.p-noimg{ border:1px dashed #999; font-size:8px; text-align:center; padding:2px; box-sizing:border-box; }
       .p-hint{ font-size:11px; color:#888; }
-      .p-refpage{ page-break-before:always; display:flex; align-items:center; justify-content:center; height:190mm; }
-      .p-refpage img{ max-width:100%; max-height:100%; object-fit:contain; }
+      .p-refpage{ page-break-before:always; display:flex; align-items:center; justify-content:center;
+        gap:8mm; flex-wrap:wrap; height:190mm; }
+      .p-refpage img{ max-width:31%; max-height:100%; object-fit:contain; }
       @media print{ .noprint{ display:none; } }
     </style></head><body>
     ${html}
