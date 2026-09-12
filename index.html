@@ -2944,20 +2944,24 @@ function buildPrintTable(){
    a glance during a game. Reuses the same UNIT_CARD_BY_NAME/ITEM_CARD_BY_NAME/PERK_CARD_BY_NAME
    lookups the on-screen 🃏 buttons use; an entry with no matching art just falls back to its
    name in a dashed placeholder box instead of breaking the layout. ---- */
-function printCardImgHtml(name, cardMap, cls){
+function printCardImgHtml(name, cardMap, cls, cost){
   const val = cardMap[name];
   const files = val ? (Array.isArray(val) ? val : [val]) : [];
-  if(!files.length) return `<div class="${cls} p-noimg">${name}</div>`;
-  return files.map(f=>`<img class="${cls}" src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="${name}">`).join('');
+  const badge = (cost===undefined || cost===null) ? '' : `<span class="p-cost-badge">${cost}</span>`;
+  const inner = files.length
+    ? files.map(f=>`<img class="${cls}" src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="${name}">`).join('')
+    : `<div class="${cls} p-noimg">${name}</div>`;
+  return `<div class="p-cardwrap">${inner}${badge}</div>`;
 }
 // Item/perk/mod cards sit in a fixed 8-per-row grid (see .p-items-grid) — each gets wrapped in a
 // same-size box so a landscape perk card and a portrait item card still occupy identical grid
 // cells; printCardImgHtml above stays as-is for the big unit portrait, which doesn't need that.
-function printCardBoxHtml(name, cardMap){
+function printCardBoxHtml(name, cardMap, cost){
   const val = cardMap[name];
   const files = val ? (Array.isArray(val) ? val : [val]) : [];
-  if(!files.length) return `<div class="p-item-box p-noimg">${name}</div>`;
-  return files.map(f=>`<div class="p-item-box"><img class="p-item-img" src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="${name}"></div>`).join('');
+  const badge = (cost===undefined || cost===null) ? '' : `<span class="p-cost-badge">${cost}</span>`;
+  if(!files.length) return `<div class="p-item-box p-noimg">${name}${badge}</div>`;
+  return files.map(f=>`<div class="p-item-box"><img class="p-item-img" src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="${name}">${badge}</div>`).join('');
 }
 // The force's faction (for the faction rule card, both here and in the squad toolbar) is
 // whichever faction the first-added member's unit belongs to — mirrors wastelandworkshop, which
@@ -2985,9 +2989,19 @@ function squadForceReferenceFiles(members){
   });
   return files;
 }
-function buildPrintSquadHtml(){
-  const members = Object.values(state.squad.members).filter(m=>m.mission);
+// mode: 'mission' (default, only members flagged for the mission) or 'all' (the whole roster,
+// mission members first — same relative order — then everyone else).
+function buildPrintSquadHtml(mode){
+  const allMembers = Object.values(state.squad.members);
+  const missionMembers = allMembers.filter(m=>m.mission);
+  const members = mode==='all' ? [...missionMembers, ...allMembers.filter(m=>!m.mission)] : missionMembers;
   if(!members.length) return '<p>Нет бойцов с отметкой «Миссия».</p>';
+
+  const missionCaps = missionMembers.reduce((s,m)=>s+capsForMember(m), 0);
+  const costHeaderHtml = mode==='all'
+    ? `<div class="p-cost-header">На миссию: ${missionCaps} caps &middot; Весь отряд: ${allMembers.reduce((s,m)=>s+capsForMember(m),0)} caps</div>`
+    : `<div class="p-cost-header">Стоимость отряда: ${missionCaps} caps</div>`;
+
   const unitsHtml = members.map(m=>{
     const unit = (m.unitIdx!==null && m.unitIdx!==undefined) ? UNITS_DB[m.unitIdx] : null;
     const unitName = unit ? unit[1] : '?';
@@ -2997,7 +3011,7 @@ function buildPrintSquadHtml(){
     const hidePerks = !!memberModSlot || isDog;
     const innatePerks = unit && unit[3] ? unit[3] : [];
 
-    const unitImgHtml = printCardImgHtml(unitName, isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME, 'p-unit-img');
+    const unitImgHtml = printCardImgHtml(unitName, isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME, 'p-unit-img', capsForMember(m));
     let autoHtml = '';
     if(isAutomatronHeadIdx(m.unitIdx)){
       if(m.automatronTorso) autoHtml += printCardImgHtml(m.automatronTorso, AUTOMATRON_TORSO_CARD_BY_NAME, 'p-unit-img');
@@ -3031,11 +3045,11 @@ function buildPrintSquadHtml(){
     cardsHtml += heldItems.map(inst=>{
       const it = ITEMS_DB[inst.itemIdx];
       if(!it) return '';
-      let html = printCardBoxHtml(it[2], ITEM_CARD_BY_NAME);
+      let html = printCardBoxHtml(it[2], ITEM_CARD_BY_NAME, it[3]);
       if(inst.modInstId){
         const modInst = state.warehouse.items[inst.modInstId];
         const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
-        if(modIt) html += printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME);
+        if(modIt) html += printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3]);
       }
       return html;
     }).join('');
@@ -3045,7 +3059,7 @@ function buildPrintSquadHtml(){
       cardsHtml += (m.mods||[]).map(modId=>{
         const modInst = state.warehouse.items[modId];
         const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
-        return modIt ? printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME) : '';
+        return modIt ? printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3]) : '';
       }).join('');
     }
 
@@ -3070,10 +3084,10 @@ function buildPrintSquadHtml(){
     ? `<div class="p-refpage">${pageFiles.map(([f,title])=>`<img src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="${title}">`).join('')}</div>`
     : '';
 
-  return unitsHtml + refPageHtml;
+  return costHeaderHtml + unitsHtml + refPageHtml;
 }
-function printSquadRoster(){
-  const html = buildPrintSquadHtml();
+function printSquadRoster(mode){
+  const html = buildPrintSquadHtml(mode);
   const win = window.open('', '_blank');
   if(!win){ toast('Браузер заблокировал всплывающее окно — разрешите его для печати', true); return; }
   win.document.write(`
@@ -3096,10 +3110,14 @@ function printSquadRoster(){
          as the reference layout the user pointed at. Every box is the same size regardless of
          whether that particular card scan is portrait or landscape, so the grid stays even. */
       .p-items-grid{ flex:1; display:grid; grid-template-columns:repeat(8, 1fr); gap:3px 0; align-content:start; }
-      .p-item-box{ aspect-ratio:3/2; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+      .p-item-box{ position:relative; aspect-ratio:3/2; display:flex; align-items:center; justify-content:center; overflow:hidden; }
       .p-item-img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
       .p-item-box.p-noimg{ border:1px dashed #999; font-size:8px; text-align:center; padding:2px; box-sizing:border-box; }
+      .p-cardwrap{ position:relative; display:inline-block; }
+      .p-cost-badge{ position:absolute; top:2px; right:2px; background:#111; color:#fff; font-size:10px;
+        font-weight:bold; padding:1px 5px; border-radius:3px; line-height:1.4; font-family:'Courier New', monospace; }
       .p-hint{ font-size:11px; color:#888; }
+      .p-cost-header{ font-size:13px; font-weight:bold; margin-bottom:8px; }
       .p-refpage{ page-break-before:always; display:flex; align-items:center; justify-content:center;
         gap:8mm; flex-wrap:wrap; height:190mm; }
       .p-refpage img{ max-width:31%; max-height:100%; object-fit:contain; }
@@ -3129,7 +3147,7 @@ function printLayout(){
       @media print{ .noprint{ display:none; } }
     </style></head><body>
     <h1>FALLOUT: WASTELAND WARFARE — Settlement Layout</h1>
-    <div class="meta">Land level: ${state.landLevel} (${ZONE_NAMES[state.landLevel]}) &middot; Распечатано: ${new Date().toLocaleString()}</div>
+    <div class="meta">Land level: ${state.landLevel} (${ZONE_NAMES[state.landLevel]}) &middot; ⚡ Энергия: ${computeEnergy()} &middot; 💧 Вода: ${computeWater()} &middot; Распечатано: ${new Date().toLocaleString()}</div>
     <div class="wrap">
       <div>${svg}</div>
       <div style="min-width:280px;"><h3 style="font-size:13px;">Structures Log</h3>${table}</div>
@@ -3821,7 +3839,8 @@ function renderSquadView(){
         <button id="btnLoadJsonSquad">⭱ Загрузить JSON</button>
         <input type="file" id="fileLoadJsonSquad" accept="application/json" style="display:none">
         <button id="btnExportWW" style="display:none" title="Открыть отряд в фанатском билдере achapin.github.io/wastelandworkshop (для печати карточек)">⇗ Wasteland Workshop</button>
-        <button id="btnPrintSquad" title="Печатная раскладка ростера: карточки юнитов и предметов вместо текста">🖨 Печать состава</button>
+        <button id="btnPrintSquadMission" title="Печатная раскладка: только бойцы с отметкой «Миссия»">🖨 Печать: на миссию</button>
+        <button id="btnPrintSquadAll" title="Печатная раскладка: весь ростер (сначала «Миссия», потом остальные)">🖨 Печать: весь отряд</button>
         <button class="danger" id="btnClearSquad">Очистить ростер</button>
       </div>
     </div>
@@ -3991,8 +4010,10 @@ function attachSquadEvents(){
 
   const btnExportWW = document.getElementById('btnExportWW');
   if(btnExportWW) btnExportWW.onclick = openInWastelandWorkshop;
-  const btnPrintSquad = document.getElementById('btnPrintSquad');
-  if(btnPrintSquad) btnPrintSquad.onclick = printSquadRoster;
+  const btnPrintSquadMission = document.getElementById('btnPrintSquadMission');
+  if(btnPrintSquadMission) btnPrintSquadMission.onclick = ()=>printSquadRoster('mission');
+  const btnPrintSquadAll = document.getElementById('btnPrintSquadAll');
+  if(btnPrintSquadAll) btnPrintSquadAll.onclick = ()=>printSquadRoster('all');
 
   const btnClear = document.getElementById('btnClearSquad');
   if(btnClear) btnClear.onclick = ()=>{
