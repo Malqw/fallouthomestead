@@ -3111,7 +3111,7 @@ function buildPrintSquadHtml(mode){
     ? `<div class="p-refpage">${pageFiles.map(([f,title])=>`<img src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="${title}">`).join('')}</div>`
     : '';
 
-  return costHeaderHtml + unitsHtml + refPageHtml;
+  return costHeaderHtml + `<div class="p-unit-grid">${unitsHtml}</div>` + refPageHtml;
 }
 function printSquadRoster(mode){
   const html = buildPrintSquadHtml(mode);
@@ -3122,39 +3122,44 @@ function printSquadRoster(mode){
     <style>
       @page{ size:a4 landscape; margin:8mm; }
       body{ font-family:'Courier New', monospace; padding:0; color:#111; background:#fff; }
+      /* Two members side by side per page instead of one long stacked column — lets each unit's
+         portrait/item cards print bigger than a full-width layout would allow at this same page
+         size (see .p-unit-img/.p-items-grid below). */
+      .p-unit-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 18px; }
       .p-unit{ break-inside:avoid; border-bottom:1px solid #ccc; padding:6px 0; margin-bottom:4px; }
-      .p-unit-name{ font-weight:bold; font-size:13px; margin-bottom:4px; }
+      .p-unit-name{ font-weight:bold; font-size:15px; margin-bottom:4px; }
       .p-badges{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:5px; }
       .p-badge{ font-size:10px; font-weight:bold; border:1px solid #111; border-radius:3px; padding:1px 6px; }
       .p-badge-bad{ background:#111; color:#fff; }
       .p-unit-row{ display:flex; gap:10px; align-items:flex-start; }
       .p-unit-imgcol{ display:flex; flex-direction:column; gap:0; flex:0 0 auto; }
-      .p-unit-img{ width:130px; height:auto; max-height:190px; object-fit:contain; display:block; }
-      .p-unit-img.p-noimg{ border:1px dashed #999; font-size:10px; display:flex; align-items:center;
-        justify-content:center; text-align:center; padding:4px; box-sizing:border-box; width:130px; height:182px; }
-      /* Exactly 8 cards per row (repeat(8, 1fr) — not an auto-fill count that depends on how much
-         page width happens to be left) — once a 9th card shows up it starts a new row of 8, same
-         as the reference layout the user pointed at. Every box is the same size regardless of
-         whether that particular card scan is portrait or landscape, so the grid stays even. */
-      .p-items-grid{ flex:1; display:grid; grid-template-columns:repeat(8, 1fr); gap:3px 0; align-content:start; }
+      .p-unit-img{ width:175px; height:auto; max-height:255px; object-fit:contain; display:block; }
+      .p-unit-img.p-noimg{ border:1px dashed #999; font-size:12px; display:flex; align-items:center;
+        justify-content:center; text-align:center; padding:4px; box-sizing:border-box; width:175px; height:245px; }
+      /* 4 cards per row (repeat(4, 1fr) — not an auto-fill count that depends on how much page
+         width happens to be left) — once a 5th card shows up it starts a new row of 4. Every box
+         is the same size regardless of whether that particular card scan is portrait or
+         landscape, so the grid stays even. Fewer columns than a full-width layout would use since
+         each unit only gets half the page (see .p-unit-grid). */
+      .p-items-grid{ flex:1; display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; align-content:start; }
       .p-item-box{ position:relative; aspect-ratio:3/2; display:flex; align-items:center; justify-content:center; overflow:hidden; }
       .p-item-img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
-      .p-item-box.p-noimg{ border:1px dashed #999; font-size:8px; text-align:center; padding:2px; box-sizing:border-box; }
+      .p-item-box.p-noimg{ border:1px dashed #999; font-size:10px; text-align:center; padding:2px; box-sizing:border-box; }
       /* Fixed width matching .p-unit-img (the only thing this wraps) rather than shrink-to-fit —
          an inline-block with an absolutely-positioned %-based child otherwise stretches to fill
          the available line width instead of hugging the image. */
-      .p-cardwrap{ position:relative; display:inline-block; width:130px; }
-      .p-cost-badge{ position:absolute; top:2px; right:2px; background:#111; color:#fff; font-size:8px;
-        font-weight:bold; padding:1px 4px; border-radius:2px; line-height:1.3; font-family:'Courier New', monospace; }
+      .p-cardwrap{ position:relative; display:inline-block; width:175px; }
+      .p-cost-badge{ position:absolute; top:2px; right:2px; background:#111; color:#fff; font-size:10px;
+        font-weight:bold; padding:1px 5px; border-radius:2px; line-height:1.3; font-family:'Courier New', monospace; }
       /* Every unit card's blank bottom-right slot, measured off the actual card art (~70-95% /
          88-96%), nudged down a bit further per feedback — a black pill like every other badge
          (not transparent text) since some cards already print their own number in this slot and
          the two would otherwise overlap into an unreadable mess. */
       .p-cost-badge.p-cost-badge-unit{ top:89%; left:70%; width:25%; height:7%; transform:none;
         background:#111; color:#fff; padding:1px 3px; border-radius:2px;
-        display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:bold; }
-      .p-hint{ font-size:11px; color:#888; }
-      .p-cost-header{ font-size:13px; font-weight:bold; margin-bottom:8px; }
+        display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; }
+      .p-hint{ font-size:12px; color:#888; }
+      .p-cost-header{ font-size:15px; font-weight:bold; margin-bottom:8px; }
       .p-refpage{ page-break-before:always; display:flex; align-items:center; justify-content:center;
         gap:8mm; flex-wrap:wrap; height:190mm; }
       .p-refpage img{ max-width:31%; max-height:100%; object-fit:contain; }
