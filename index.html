@@ -3131,10 +3131,9 @@ function printSquadRoster(mode){
     <style>
       @page{ size:a4 landscape; margin:8mm; }
       body{ font-family:'Courier New', monospace; padding:0; color:#111; background:#fff; }
-      /* Exactly two members side by side per page (page-break-after is set in JS on every other
-         .p-unit-page) instead of one long stacked column or a naturally-reflowing grid that could
-         fit 4 at this card size and leave no headroom for the item grid. */
-      .p-unit-page{ display:grid; grid-template-columns:1fr 1fr; gap:0 18px; }
+      /* Exactly two members stacked one above the other per page (page-break-after is set in JS
+         on every other .p-unit-page) instead of one long scrolling column or side by side. */
+      .p-unit-page{ display:flex; flex-direction:column; }
       .p-unit{ break-inside:avoid; border-bottom:1px solid #ccc; padding:6px 0; margin-bottom:4px; }
       .p-unit-name{ font-weight:bold; font-size:15px; margin-bottom:4px; }
       .p-badges{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:5px; }
@@ -3145,13 +3144,12 @@ function printSquadRoster(mode){
       .p-unit-img{ width:175px; height:auto; max-height:255px; object-fit:contain; display:block; }
       .p-unit-img.p-noimg{ border:1px dashed #999; font-size:12px; display:flex; align-items:center;
         justify-content:center; text-align:center; padding:4px; box-sizing:border-box; width:175px; height:245px; }
-      /* 3 cards per row (repeat(3, 1fr) — not an auto-fill count that depends on how much page
-         width happens to be left) — once a 4th card shows up it starts a new row of 3. Every box
-         is the same size regardless of whether that particular card scan is portrait or
-         landscape, so the grid stays even. Fewer columns than a full-width layout would use since
-         each unit only gets half the page (see .p-unit-page) - fixing the page to exactly 2
-         members means there's plenty of vertical room for extra rows, so cards can print bigger. */
-      .p-items-grid{ flex:1; display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; align-content:start; }
+      /* Fixed-width columns (repeat(auto-fill, 119px) — half the unit portrait's own rendered
+         LENGTH (238px tall at 175px wide, per the card art's real aspect ratio), not its width,
+         per your call) rather than a fixed column COUNT, since units now stack one per row and
+         get the full page width - a fixed column count would blow each card up huge instead of
+         just wrapping to more rows as needed. */
+      .p-items-grid{ flex:1; display:grid; grid-template-columns:repeat(auto-fill, 119px); gap:5px; align-content:start; }
       .p-item-box{ position:relative; aspect-ratio:3/2; display:flex; align-items:center; justify-content:center; overflow:hidden; }
       .p-item-img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
       .p-item-box.p-noimg{ border:1px dashed #999; font-size:10px; text-align:center; padding:2px; box-sizing:border-box; }
