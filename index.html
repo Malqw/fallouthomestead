@@ -3046,15 +3046,28 @@ function buildPrintSquadHtml(mode){
     let cardsHtml = '';
     if(m.heroic && !isDog){
       const heroicName = memberModSlot==='Robot Mod' ? 'Clunky' : memberModSlot==='Creature Mod' ? 'Wild' : 'Heroic';
-      cardsHtml += printCardBoxHtml(heroicName, HEROIC_CARD_BY_NAME);
+      // Same math as capsForMember(): Clunky/Wild is a 20% CUT off the model's own base cost, an
+      // Automatron with a Sentry Bot torso but no Sentry Bot legs/head blocks that cut entirely
+      // (isAuto && automatronClunkyBlocked), and ordinary Heroic is a flat +48 add-on.
+      const isAutoForHeroic = isAutomatronHeadIdx(m.unitIdx);
+      let heroicCost = 0;
+      if(memberModSlot && !(isAutoForHeroic && automatronClunkyBlocked(m))) heroicCost = -Math.ceil(unitBaseCost(m) * 0.2);
+      else if(!memberModSlot) heroicCost = 48;
+      cardsHtml += printCardBoxHtml(heroicName, HEROIC_CARD_BY_NAME, heroicCost);
     }
     if(m.leader && m.leaderPerk!==null && m.leaderPerk!==undefined && LEADER_PERKS_DB[m.leaderPerk]){
-      cardsHtml += printCardBoxHtml(LEADER_PERKS_DB[m.leaderPerk][0], LEADER_PERK_CARD_BY_NAME);
+      cardsHtml += printCardBoxHtml(LEADER_PERKS_DB[m.leaderPerk][0], LEADER_PERK_CARD_BY_NAME, LEADER_PERKS_DB[m.leaderPerk][1]);
     }
     if(!hidePerks){
-      cardsHtml += [...innatePerks, ...m.perks].map(pidx=>{
+      // Innate perks always print as 0 (locked/free by design, same as the 🔒 "бесплатный,
+      // убрать нельзя" builder UI); manually-added perks show their real PERKS_DB cost.
+      cardsHtml += innatePerks.map(pidx=>{
         const p = PERKS_DB[pidx];
-        return p ? printCardBoxHtml(p[0], PERK_CARD_BY_NAME) : '';
+        return p ? printCardBoxHtml(p[0], PERK_CARD_BY_NAME, 0) : '';
+      }).join('');
+      cardsHtml += m.perks.map(pidx=>{
+        const p = PERKS_DB[pidx];
+        return p ? printCardBoxHtml(p[0], PERK_CARD_BY_NAME, p[1]) : '';
       }).join('');
     }
     cardsHtml += heldItems.map(inst=>{
