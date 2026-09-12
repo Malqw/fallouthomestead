@@ -914,11 +914,18 @@ function removePerkFromMember(id, pos){
   saveState();
   render();
 }
+// Just the model itself — head cost, plus torso+legs for an Automatron — before Heroic/Clunky/
+// Wild, leader perk, regular perks, or held items. This is what prints on the unit's own card;
+// capsForMember() below is the full total (base + everything else) shown in parens by its name.
+function unitBaseCost(m){
+  const isAuto = isAutomatronHeadIdx(m.unitIdx);
+  const headCost = (m.unitIdx!==null && m.unitIdx!==undefined && UNITS_DB[m.unitIdx]) ? UNITS_DB[m.unitIdx][2] : 0;
+  return isAuto ? headCost + automatronPartsCost(m) : headCost;
+}
 function capsForMember(m){
   let total = 0;
   const isAuto = isAutomatronHeadIdx(m.unitIdx);
-  const headCost = (m.unitIdx!==null && m.unitIdx!==undefined && UNITS_DB[m.unitIdx]) ? UNITS_DB[m.unitIdx][2] : 0;
-  const baseCost = isAuto ? headCost + automatronPartsCost(m) : headCost; // head+torso+legs for an Automatron
+  const baseCost = unitBaseCost(m);
   total += baseCost;
   const modType = unitModTypeForIdx(m.unitIdx); // 'Robot Mod' | 'Creature Mod' | null
   const isDog = isDogUnitIdx(m.unitIdx);
@@ -3015,7 +3022,7 @@ function buildPrintSquadHtml(mode){
     const hidePerks = !!memberModSlot || isDog;
     const innatePerks = unit && unit[3] ? unit[3] : [];
 
-    const unitImgHtml = printCardImgHtml(unitName, isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME, 'p-unit-img', capsForMember(m));
+    const unitImgHtml = printCardImgHtml(unitName, isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME, 'p-unit-img', unitBaseCost(m));
     let autoHtml = '';
     if(isAutomatronHeadIdx(m.unitIdx)){
       if(m.automatronTorso) autoHtml += printCardImgHtml(m.automatronTorso, AUTOMATRON_TORSO_CARD_BY_NAME, 'p-unit-img');
@@ -3068,7 +3075,7 @@ function buildPrintSquadHtml(mode){
     }
 
     return `<div class="p-unit">
-      <div class="p-unit-name">#${m.id} ${m.name ? m.name+' — ' : ''}${unitName}${m.leader?' ★ Leader':''}${m.mission?' ⚑':''}</div>
+      <div class="p-unit-name">#${m.id} ${m.name ? m.name+' — ' : ''}${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}${m.mission?' ⚑':''}</div>
       ${badgesHtml}
       <div class="p-unit-row">
         <div class="p-unit-imgcol">${unitImgHtml}${autoHtml}</div>
