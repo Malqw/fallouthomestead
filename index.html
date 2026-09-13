@@ -3098,9 +3098,10 @@ function buildPrintSquadHtml(mode){
     // Recording" checklist (Survival Mode, p.29) word for word — Regular/Radiation Damage,
     // Poisoned/Injured Arm/Injured Leg as a cross, Addicted as free text, Battles/Removed as
     // running counts, Fate ('?' if Removed, resolved later). Purely a paper form — nothing here
-    // is read back into the app; the player transcribes results in by hand afterwards. Shares the
-    // name line instead of its own row to save vertical space (fits 3 members/page again).
-    const battleLogHtml = `<span class="p-battle-log">
+    // is read back into the app; the player transcribes results in by hand afterwards. Own row
+    // below the name (readable size) — the unit blocks themselves are tightened up instead to
+    // still fit 3/page.
+    const battleLogHtml = `<div class="p-battle-log">
       <span class="p-battle-field">Урон <span class="p-battle-box"></span></span>
       <span class="p-battle-field">Радиация <span class="p-battle-box"></span></span>
       <span class="p-battle-field">Отравлен <span class="p-battle-check"></span></span>
@@ -3110,10 +3111,11 @@ function buildPrintSquadHtml(mode){
       <span class="p-battle-field">Бой +1 <span class="p-battle-box p-battle-box-narrow"></span></span>
       <span class="p-battle-field">Убран +1 <span class="p-battle-box p-battle-box-narrow"></span></span>
       <span class="p-battle-field">Судьба <span class="p-battle-box p-battle-box-wide"></span></span>
-    </span>`;
+    </div>`;
 
     return `<div class="p-unit">
-      <div class="p-unit-name">#${m.id} ${m.name ? m.name+' — ' : ''}${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}${m.mission?' ⚑':''} ${battleLogHtml}</div>
+      <div class="p-unit-name">#${m.id} ${m.name ? m.name+' — ' : ''}${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}${m.mission?' ⚑':''}</div>
+      ${battleLogHtml}
       ${badgesHtml}
       <div class="p-unit-row">
         <div class="p-unit-imgcol">${unitImgHtml}${autoHtml}</div>
@@ -3151,10 +3153,10 @@ function printSquadRoster(mode){
       body{ font-family:'Courier New', monospace; padding:0; color:#111; background:#fff; }
       /* Members stack one above the other, full page width each - no forced page grouping
          (natural page breaks handle who spills to the next page, see buildPrintSquadHtml). */
-      .p-unit{ break-inside:avoid; border-bottom:1px solid #ccc; padding:6px 0; margin-bottom:4px; }
-      .p-unit-name{ font-weight:bold; font-size:15px; margin-bottom:4px; display:flex;
+      .p-unit{ break-inside:avoid; border-bottom:1px solid #ccc; padding:3px 0; margin-bottom:2px; }
+      .p-unit-name{ font-weight:bold; font-size:15px; margin-bottom:2px; display:flex;
         flex-wrap:wrap; align-items:baseline; }
-      .p-badges{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:5px; }
+      .p-badges{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:3px; }
       .p-badge{ font-size:10px; font-weight:bold; border:1px solid #111; border-radius:3px; padding:1px 6px; }
       .p-badge-bad{ background:#111; color:#fff; }
       .p-unit-row{ display:flex; gap:6px; align-items:flex-start; }
@@ -3189,18 +3191,19 @@ function printSquadRoster(mode){
         background:#111; color:#fff; padding:1px 3px; border-radius:2px;
         display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold; }
       .p-hint{ font-size:12px; color:#888; }
-      .p-cost-header{ font-size:15px; font-weight:bold; margin-bottom:8px; }
+      .p-cost-header{ font-size:12px; font-weight:bold; margin-bottom:4px; }
       /* Battle Recording strip (Homestead Survival Mode, p.29) — blank paper fields filled in by
-         hand after the game, not read back into the app. */
-      .p-battle-log{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:3px 6px;
-        font-size:8px; font-weight:normal; margin-left:8px; vertical-align:middle; }
-      .p-battle-field{ display:inline-flex; align-items:center; gap:2px; white-space:nowrap;
-        padding-right:6px; border-right:1px solid #ccc; }
+         hand after the game, not read back into the app. Own row below the name — readable size,
+         since the unit blocks themselves (.p-unit above) were tightened up to compensate. */
+      .p-battle-log{ display:flex; flex-wrap:wrap; align-items:center; gap:3px 8px;
+        font-size:10px; font-weight:normal; margin-bottom:2px; }
+      .p-battle-field{ display:inline-flex; align-items:center; gap:3px; white-space:nowrap;
+        padding-right:8px; border-right:1px solid #ccc; }
       .p-battle-field:last-child{ border-right:none; padding-right:0; }
-      .p-battle-box{ display:inline-block; width:18px; height:10px; border:1px solid #999; }
-      .p-battle-box-wide{ width:56px; }
-      .p-battle-box-narrow{ width:12px; }
-      .p-battle-check{ display:inline-block; width:8px; height:8px; border:1px solid #999; }
+      .p-battle-box{ display:inline-block; width:22px; height:12px; border:1px solid #999; }
+      .p-battle-box-wide{ width:70px; }
+      .p-battle-box-narrow{ width:15px; }
+      .p-battle-check{ display:inline-block; width:10px; height:10px; border:1px solid #999; }
       .p-refpage{ page-break-before:always; display:flex; align-items:center; justify-content:center;
         gap:8mm; flex-wrap:wrap; height:190mm; }
       .p-refpage img{ max-width:31%; max-height:100%; object-fit:contain; }
