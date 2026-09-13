@@ -3154,7 +3154,7 @@ function printSquadRoster(mode){
       /* Members stack one above the other, full page width each - no forced page grouping
          (natural page breaks handle who spills to the next page, see buildPrintSquadHtml). */
       .p-unit{ break-inside:avoid; border-bottom:1px solid #ccc; padding:3px 0; margin-bottom:2px; }
-      .p-unit-name{ font-weight:bold; font-size:15px; margin-bottom:2px; display:flex;
+      .p-unit-name{ font-weight:bold; font-size:13px; margin-bottom:2px; display:flex;
         flex-wrap:wrap; align-items:baseline; }
       .p-badges{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:3px; }
       .p-badge{ font-size:10px; font-weight:bold; border:1px solid #111; border-radius:3px; padding:1px 6px; }
@@ -3195,15 +3195,15 @@ function printSquadRoster(mode){
       /* Battle Recording strip (Homestead Survival Mode, p.29) — blank paper fields filled in by
          hand after the game, not read back into the app. Own row below the name — readable size,
          since the unit blocks themselves (.p-unit above) were tightened up to compensate. */
-      .p-battle-log{ display:flex; flex-wrap:wrap; align-items:center; gap:3px 8px;
-        font-size:10px; font-weight:normal; margin-bottom:2px; }
+      .p-battle-log{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 9px;
+        font-size:12px; font-weight:normal; margin-bottom:2px; }
       .p-battle-field{ display:inline-flex; align-items:center; gap:3px; white-space:nowrap;
-        padding-right:8px; border-right:1px solid #ccc; }
+        padding-right:9px; border-right:1px solid #ccc; }
       .p-battle-field:last-child{ border-right:none; padding-right:0; }
-      .p-battle-box{ display:inline-block; width:22px; height:12px; border:1px solid #999; }
-      .p-battle-box-wide{ width:70px; }
-      .p-battle-box-narrow{ width:15px; }
-      .p-battle-check{ display:inline-block; width:10px; height:10px; border:1px solid #999; }
+      .p-battle-box{ display:inline-block; width:26px; height:14px; border:1px solid #999; }
+      .p-battle-box-wide{ width:78px; }
+      .p-battle-box-narrow{ width:17px; }
+      .p-battle-check{ display:inline-block; width:12px; height:12px; border:1px solid #999; }
       .p-refpage{ page-break-before:always; display:flex; align-items:center; justify-content:center;
         gap:8mm; flex-wrap:wrap; height:190mm; }
       .p-refpage img{ max-width:31%; max-height:100%; object-fit:contain; }
