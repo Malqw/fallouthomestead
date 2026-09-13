@@ -3098,9 +3098,9 @@ function buildPrintSquadHtml(mode){
     // Recording" checklist (Survival Mode, p.29) word for word — Regular/Radiation Damage,
     // Poisoned/Injured Arm/Injured Leg as a cross, Addicted as free text, Battles/Removed as
     // running counts, Fate ('?' if Removed, resolved later). Purely a paper form — nothing here
-    // is read back into the app; the player transcribes results in by hand afterwards.
-    const battleLogHtml = `<div class="p-battle-log">
-      <span class="p-battle-title">Итоги боя:</span>
+    // is read back into the app; the player transcribes results in by hand afterwards. Shares the
+    // name line instead of its own row to save vertical space (fits 3 members/page again).
+    const battleLogHtml = `<span class="p-battle-log">
       <span class="p-battle-field">Урон <span class="p-battle-box"></span></span>
       <span class="p-battle-field">Радиация <span class="p-battle-box"></span></span>
       <span class="p-battle-field"><span class="p-battle-check"></span> Отравлен</span>
@@ -3109,17 +3109,16 @@ function buildPrintSquadHtml(mode){
       <span class="p-battle-field">Зависимость <span class="p-battle-box p-battle-box-wide"></span></span>
       <span class="p-battle-field">Battles +1 <span class="p-battle-box p-battle-box-narrow"></span></span>
       <span class="p-battle-field">Removed +1 <span class="p-battle-box p-battle-box-narrow"></span></span>
-      <span class="p-battle-field">Fate <span class="p-battle-box p-battle-box-narrow"></span></span>
-    </div>`;
+      <span class="p-battle-field">Fate <span class="p-battle-box p-battle-box-wide"></span></span>
+    </span>`;
 
     return `<div class="p-unit">
-      <div class="p-unit-name">#${m.id} ${m.name ? m.name+' — ' : ''}${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}${m.mission?' ⚑':''}</div>
+      <div class="p-unit-name">#${m.id} ${m.name ? m.name+' — ' : ''}${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}${m.mission?' ⚑':''} ${battleLogHtml}</div>
       ${badgesHtml}
       <div class="p-unit-row">
         <div class="p-unit-imgcol">${unitImgHtml}${autoHtml}</div>
         <div class="p-items-grid">${cardsHtml || '<span class="p-hint">нет предметов/перков</span>'}</div>
       </div>
-      ${battleLogHtml}
     </div>`;
   });
 
@@ -3153,7 +3152,8 @@ function printSquadRoster(mode){
       /* Members stack one above the other, full page width each - no forced page grouping
          (natural page breaks handle who spills to the next page, see buildPrintSquadHtml). */
       .p-unit{ break-inside:avoid; border-bottom:1px solid #ccc; padding:6px 0; margin-bottom:4px; }
-      .p-unit-name{ font-weight:bold; font-size:15px; margin-bottom:4px; }
+      .p-unit-name{ font-weight:bold; font-size:15px; margin-bottom:4px; display:flex;
+        flex-wrap:wrap; align-items:baseline; }
       .p-badges{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:5px; }
       .p-badge{ font-size:10px; font-weight:bold; border:1px solid #111; border-radius:3px; padding:1px 6px; }
       .p-badge-bad{ background:#111; color:#fff; }
@@ -3192,14 +3192,13 @@ function printSquadRoster(mode){
       .p-cost-header{ font-size:15px; font-weight:bold; margin-bottom:8px; }
       /* Battle Recording strip (Homestead Survival Mode, p.29) — blank paper fields filled in by
          hand after the game, not read back into the app. */
-      .p-battle-log{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-top:6px;
-        padding-top:4px; border-top:1px dashed #bbb; font-size:11px; }
-      .p-battle-title{ font-weight:bold; }
-      .p-battle-field{ display:flex; align-items:center; gap:3px; white-space:nowrap; }
-      .p-battle-box{ display:inline-block; width:26px; height:14px; border:1px solid #999; }
-      .p-battle-box-wide{ width:80px; }
-      .p-battle-box-narrow{ width:18px; }
-      .p-battle-check{ display:inline-block; width:12px; height:12px; border:1px solid #999; }
+      .p-battle-log{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px 10px;
+        font-size:10px; font-weight:normal; margin-left:10px; vertical-align:middle; }
+      .p-battle-field{ display:inline-flex; align-items:center; gap:3px; white-space:nowrap; }
+      .p-battle-box{ display:inline-block; width:24px; height:13px; border:1px solid #999; }
+      .p-battle-box-wide{ width:56px; }
+      .p-battle-box-narrow{ width:16px; }
+      .p-battle-check{ display:inline-block; width:11px; height:11px; border:1px solid #999; }
       .p-refpage{ page-break-before:always; display:flex; align-items:center; justify-content:center;
         gap:8mm; flex-wrap:wrap; height:190mm; }
       .p-refpage img{ max-width:31%; max-height:100%; object-fit:contain; }
