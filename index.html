@@ -3103,12 +3103,12 @@ function buildPrintSquadHtml(mode){
     const battleLogHtml = `<span class="p-battle-log">
       <span class="p-battle-field">Урон <span class="p-battle-box"></span></span>
       <span class="p-battle-field">Радиация <span class="p-battle-box"></span></span>
-      <span class="p-battle-field"><span class="p-battle-check"></span> Отравлен</span>
-      <span class="p-battle-field"><span class="p-battle-check"></span> Рука</span>
-      <span class="p-battle-field"><span class="p-battle-check"></span> Нога</span>
+      <span class="p-battle-field">Отравлен <span class="p-battle-check"></span></span>
+      <span class="p-battle-field">Рука <span class="p-battle-check"></span></span>
+      <span class="p-battle-field">Нога <span class="p-battle-check"></span></span>
       <span class="p-battle-field">Зависимость <span class="p-battle-box p-battle-box-wide"></span></span>
-      <span class="p-battle-field">Battles +1 <span class="p-battle-box p-battle-box-narrow"></span></span>
-      <span class="p-battle-field">Removed +1 <span class="p-battle-box p-battle-box-narrow"></span></span>
+      <span class="p-battle-field">Бой +1 <span class="p-battle-box p-battle-box-narrow"></span></span>
+      <span class="p-battle-field">Убран +1 <span class="p-battle-box p-battle-box-narrow"></span></span>
       <span class="p-battle-field">Судьба <span class="p-battle-box p-battle-box-wide"></span></span>
     </span>`;
 
@@ -3192,9 +3192,11 @@ function printSquadRoster(mode){
       .p-cost-header{ font-size:15px; font-weight:bold; margin-bottom:8px; }
       /* Battle Recording strip (Homestead Survival Mode, p.29) — blank paper fields filled in by
          hand after the game, not read back into the app. */
-      .p-battle-log{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px 10px;
+      .p-battle-log{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px 8px;
         font-size:10px; font-weight:normal; margin-left:10px; vertical-align:middle; }
-      .p-battle-field{ display:inline-flex; align-items:center; gap:3px; white-space:nowrap; }
+      .p-battle-field{ display:inline-flex; align-items:center; gap:3px; white-space:nowrap;
+        padding-right:9px; border-right:1px solid #ccc; }
+      .p-battle-field:last-child{ border-right:none; padding-right:0; }
       .p-battle-box{ display:inline-block; width:24px; height:13px; border:1px solid #999; }
       .p-battle-box-wide{ width:85px; }
       .p-battle-box-narrow{ width:16px; }
