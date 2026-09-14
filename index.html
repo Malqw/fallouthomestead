@@ -3037,13 +3037,10 @@ function buildPrintSquadHtml(mode){
       if(m.automatronLegs) autoHtml += printCardImgHtml(m.automatronLegs, AUTOMATRON_LEGS_CARD_BY_NAME, 'p-unit-img');
     }
 
-    const badges = [];
-    if(m.poisoned) badges.push('<span class="p-badge p-badge-bad">Poisoned</span>');
-    if(m.injuredArm) badges.push('<span class="p-badge p-badge-bad">Inj. Arm</span>');
-    if(m.injuredLeg) badges.push('<span class="p-badge p-badge-bad">Inj. Leg</span>');
-    if(m.damage > 0) badges.push(`<span class="p-badge">Damage: ${m.damage}</span>`);
-    if(m.radiation > 0) badges.push(`<span class="p-badge">Radiation: ${m.radiation}</span>`);
-    const badgesHtml = badges.length ? `<div class="p-badges">${badges.join('')}</div>` : '';
+    // Current Poisoned/Injured Arm/Injured Leg/Damage/Radiation used to print as read-only
+    // badges here, but that's exactly what the battle-log row below already covers (Отравлен/
+    // Рука/Нога/Урон/Радиация) - printing both wasted a whole extra line per unit and broke the
+    // 3-per-page fit. Removed; the battle-log is now the only place this shows on paper.
 
     // Same order as the builder: Heroic/Clunky/Wild -> Leader Perk -> Perks -> Items (a mod
     // immediately follows the item it's attached to, same as it reads on-screen).
@@ -3117,7 +3114,6 @@ function buildPrintSquadHtml(mode){
     return `<div class="p-unit">
       <div class="p-unit-name">#${m.id} ${m.name ? m.name+' — ' : ''}${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}${m.mission?' ⚑':''}</div>
       ${battleLogHtml}
-      ${badgesHtml}
       <div class="p-unit-row">
         <div class="p-unit-imgcol">${unitImgHtml}${autoHtml}</div>
         <div class="p-items-grid">${cardsHtml || '<span class="p-hint">нет предметов/перков</span>'}</div>
@@ -3157,9 +3153,6 @@ function printSquadRoster(mode){
       .p-unit{ break-inside:avoid; border-bottom:1px solid #ccc; padding:3px 0; margin-bottom:2px; }
       .p-unit-name{ font-weight:bold; font-size:13px; margin-bottom:2px; display:flex;
         flex-wrap:wrap; align-items:baseline; }
-      .p-badges{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:3px; }
-      .p-badge{ font-size:10px; font-weight:bold; border:1px solid #111; border-radius:3px; padding:1px 6px; }
-      .p-badge-bad{ background:#111; color:#fff; }
       .p-unit-row{ display:flex; gap:6px; align-items:flex-start; }
       .p-unit-imgcol{ display:flex; flex-direction:column; gap:0; flex:0 0 auto; }
       .p-unit-img{ width:132px; height:auto; max-height:190px; object-fit:contain; display:block; }
