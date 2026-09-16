@@ -915,6 +915,7 @@ function updateSquadMember(id, field, value, rerender){
 function setSquadLeader(id){
   const m = state.squad.members[id];
   if(!m) return;
+  if(unitModTypeForIdx(m.unitIdx) || isDogUnitIdx(m.unitIdx)) return; // Robots/Creatures/Dogs can't be Leader
   const wasLeader = m.leader;
   Object.values(state.squad.members).forEach(x => x.leader = false);
   m.leader = !wasLeader;
@@ -1020,7 +1021,7 @@ function capsForMember(m){
     if(modType && !(isAuto && automatronClunkyBlocked(m))) total -= Math.ceil(baseCost * 0.2);
     else if(!modType) total += 48;
   }
-  if(m.leader && m.leaderPerk!==null && m.leaderPerk!==undefined && LEADER_PERKS_DB[m.leaderPerk]) total += LEADER_PERKS_DB[m.leaderPerk][1];
+  if(m.leader && !modType && !isDog && m.leaderPerk!==null && m.leaderPerk!==undefined && LEADER_PERKS_DB[m.leaderPerk]) total += LEADER_PERKS_DB[m.leaderPerk][1];
   if(!modType && !isDog){
     for(const idx of m.perks){ if(PERKS_DB[idx]) total += PERKS_DB[idx][1]; }
   }
@@ -2107,6 +2108,12 @@ function migrateSquadItems(){
     if(m.mission === undefined) m.mission = false;
     if(m.heroic === undefined) m.heroic = false;
     if(m.leaderPerk === undefined) m.leaderPerk = null;
+    // Robots/Creatures/Dogs can't be Leader (rulebook) — strip any Leader flag/perk a save made
+    // before this rule was enforced.
+    if(m.leader && (unitModTypeForIdx(m.unitIdx) || isDogUnitIdx(m.unitIdx))){
+      m.leader = false;
+      m.leaderPerk = null;
+    }
     if(!m.grantedInnateForUnits) m.grantedInnateForUnits = [];
     if(Array.isArray(m.items)){
       m.items.forEach(itemIdx=>{
@@ -3202,7 +3209,7 @@ function buildPrintSquadHtml(mode){
       else if(!memberModSlot) heroicCost = 48;
       cardsHtml += printCardBoxHtml(heroicName, HEROIC_CARD_BY_NAME, heroicCost);
     }
-    if(m.leader && m.leaderPerk!==null && m.leaderPerk!==undefined && LEADER_PERKS_DB[m.leaderPerk]){
+    if(m.leader && !hidePerks && m.leaderPerk!==null && m.leaderPerk!==undefined && LEADER_PERKS_DB[m.leaderPerk]){
       cardsHtml += printCardBoxHtml(LEADER_PERKS_DB[m.leaderPerk][0], LEADER_PERK_CARD_BY_NAME, LEADER_PERKS_DB[m.leaderPerk][1]);
     }
     if(!hidePerks){
@@ -4222,7 +4229,7 @@ function renderSquadView(){
       <input type="text" data-field="name" data-member="${m.id}" value="${(m.name||'').replace(/"/g,'&quot;')}" placeholder="напр. Джон">
 
       <div class="row">
-        <div><label><input type="checkbox" data-field="leader" data-member="${m.id}" ${m.leader?'checked':''}> Leader</label></div>
+        <div>${hidePerks ? '' : `<label><input type="checkbox" data-field="leader" data-member="${m.id}" ${m.leader?'checked':''}> Leader</label>`}</div>
         <div>${isDog ? '' : (()=>{
           const heroicName = memberModSlot==='Robot Mod' ? 'Clunky' : memberModSlot==='Creature Mod' ? 'Wild' : 'Heroic';
           const heroicLabel = memberModSlot==='Robot Mod'?'Clunky (−20%)':memberModSlot==='Creature Mod'?'Wild (−20%)':'Heroic (48)';
@@ -4250,7 +4257,7 @@ function renderSquadView(){
         ${FATE_OPTIONS.map(f=>`<option value="${f}" ${m.fate===f?'selected':''}>${f===''?'—':f}</option>`).join('')}
       </select>
 
-      ${m.leader ? `
+      ${m.leader && !hidePerks ? `
       <label>Leader Perk</label>
       <div class="combo" style="display:flex;align-items:center;gap:6px;">
         <select class="combo-native combo-enhance" data-combo-mode="value" data-combo-placeholder="Поиск лидерского перка…" data-field="leaderPerk" data-member="${m.id}">${leaderPerkOptionsHtml(m.leaderPerk)}</select>
