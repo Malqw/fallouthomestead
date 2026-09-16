@@ -365,6 +365,7 @@
     <button id="viewLayoutBtn" data-view="layout" class="active">▣ Поселение</button>
     <button id="viewSquadBtn" data-view="squad">◈ Отряд</button>
     <button id="viewWarehouseBtn" data-view="warehouse">▧ Склад</button>
+    <button id="viewMasterBtn" data-view="master">♛ Мастер</button>
     <button id="musicBtn" type="button" title="Радио Пустошей">🎵 Радио Пустошей</button>
     <label id="globalEditModeLabel" style="display:flex;align-items:center;gap:6px;margin:0 0 0 auto;font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer;">
       <input type="checkbox" id="globalEditModeToggle"> Режим редактирования (бесплатно, в обход правил)
@@ -415,6 +416,7 @@
 
 <div class="squad-view" id="squadView" style="display:none;"></div>
 <div class="squad-view" id="warehouseView" style="display:none;"></div>
+<div class="squad-view" id="masterView" style="display:none;"></div>
 
 <div class="toast" id="toast"></div>
 
@@ -819,6 +821,12 @@ let state = {
   connectors: [],         // {id,type,cells:[[r,c],[r,c]],lowEnd:0|1}
   nextConnId: 1,
   squad: { members: {}, nextMemberId: 1, faction: '' }, // Survival Mode roster, see FWW Homestead p.27-29
+  // GM's own NPC/monster roster — same unit catalog and cost rules as squad, but no names, no
+  // Survival Mode tracking (injuries/damage/addiction/fate/battles), and items are always minted
+  // fresh (never drawn from or returned to the shared Warehouse). Member ids are negative so they
+  // never collide with squad's positive ids when both are used as an item's `holder` — see
+  // getMember() and renderMasterView().
+  master: { members: {}, nextMemberId: 1, faction: '' },
   warehouse: { nextInstId: 1, items: {} }, // shared item-instance pool, see itemsHeldBy()/itemsInWarehouse()
   resources: { caps: 0, resource: 0 }, // Caps/Resource are player-entered; Energy/Water are computed, see computeEnergy()/computeWater()
   editMode: false, // GLOBAL toggle (top view-switch bar) — free building/repair/land, bypasses all cost & requirement gating everywhere in the tool
@@ -872,6 +880,12 @@ async function loadState(){
 // (Mission flag, Items via the shared Warehouse pool, and a computed Caps total).
 const FATE_OPTIONS = ['', '?', 'Delayed', 'Lost', 'Shaken', 'Captured', 'Injured', 'Dead'];
 
+// Looks a member up regardless of which roster it's in — squad ids are positive, GM/Master ids
+// are negative (see state.master) — so every helper below that takes a memberId works for both
+// without needing to know which pool it came from.
+function getMember(id){
+  return (typeof id === 'number' && id < 0) ? state.master.members[id] : state.squad.members[id];
+}
 // Unit is chosen at creation time and locked afterward — see HOMESTEAD_TOOL_CONTEXT.md; to swap
 // a unit, delete the member and add a new one (their Items/perks return to the Warehouse).
 function addSquadMemberWithUnit(unitIdx){
@@ -900,24 +914,57 @@ function deleteSquadMember(id){
   render();
   toast(`Боец #${id} удалён из ростера.`);
 }
+/* ---- Master (GM) roster: same unit catalog/cost rules as the player squad, but no name field,
+   none of Survival Mode's campaign tracking (Poisoned/Injured/Damage/Radiation/Addiction/Fate/
+   Battles/Removed/Mission), and items are always minted fresh via createItemForMember() — never
+   drawn from or returned to the shared Warehouse (see returnItemToWarehouse/detachMod/
+   detachMemberMod's negative-holder branches). Ids are negative — see getMember(). ---- */
+function addMasterMemberWithUnit(unitIdx){
+  const id = -(state.master.nextMemberId++);
+  state.master.members[id] = {
+    id, unitIdx, leader: false, heroic: false, leaderPerk: null, perks: [],
+    grantedInnateForUnits: [], grantedInnateModsForUnits: [],
+    automatronTorso: null, automatronLegs: null,
+  };
+  grantInnateForUnit(id, unitIdx);
+  grantInnateModsForUnit(id, unitIdx);
+  saveState();
+  render();
+}
+function deleteMasterMember(id){
+  // nothing returns to the Warehouse for a Master NPC — its items/mods are deleted outright
+  Object.values(state.warehouse.items).forEach(inst=>{
+    if(inst.holder === id){
+      if(inst.modInstId) delete state.warehouse.items[inst.modInstId];
+      delete state.warehouse.items[inst.id];
+    }
+  });
+  delete state.master.members[id];
+  saveState();
+  render();
+  toast(`NPC #${-id} удалён из ростера мастера.`);
+}
 // rerender=false is used by typed (text/number) inputs so a keystroke doesn't rebuild the DOM
 // mid-edit and steal focus — see attachSquadEvents(). Selects/checkboxes always rerender since
 // other cards' dropdowns (item availability) or the legend/caps line depend on the new value.
 function updateSquadMember(id, field, value, rerender){
-  const m = state.squad.members[id];
+  const m = getMember(id);
   if(!m) return;
   m[field] = value;
   saveState();
   if(rerender !== false) render();
 }
 // Only one Leader at a time (matches the rulebook's single-Leader concept) — checking a box
-// unchecks everyone else; clicking the current Leader again clears Leader entirely.
+// unchecks everyone else; clicking the current Leader again clears Leader entirely. Uniqueness is
+// scoped to whichever roster this id belongs to, so a Master NPC being Leader (if it ever could
+// be) wouldn't clear the player squad's Leader or vice versa.
 function setSquadLeader(id){
-  const m = state.squad.members[id];
+  const m = getMember(id);
   if(!m) return;
   if(unitModTypeForIdx(m.unitIdx) || isDogUnitIdx(m.unitIdx)) return; // Robots/Creatures/Dogs can't be Leader
+  const pool = id < 0 ? state.master.members : state.squad.members;
   const wasLeader = m.leader;
-  Object.values(state.squad.members).forEach(x => x.leader = false);
+  Object.values(pool).forEach(x => x.leader = false);
   m.leader = !wasLeader;
   saveState();
   render();
@@ -929,7 +976,7 @@ function setSquadLeader(id){
 // normal, removable/transferable items. Granted only ONCE per (member, unit) pair — ever — so
 // toggling Unit A -> B -> A doesn't hand out duplicates.
 function grantInnateForUnit(memberId, unitIdx){
-  const m = state.squad.members[memberId];
+  const m = getMember(memberId);
   if(!m || unitIdx === null || unitIdx === undefined) return;
   const unit = UNITS_DB[unitIdx];
   const innateItems = unit && unit[4];
@@ -962,7 +1009,7 @@ function getModCapForUnit(unitIdx){
   return (u && UNIT_MOD_CAP_OVERRIDE[u[1]]) || 2;
 }
 function grantInnateModsForUnit(memberId, unitIdx){
-  const m = state.squad.members[memberId];
+  const m = getMember(memberId);
   const unit = (unitIdx!==null && unitIdx!==undefined) ? UNITS_DB[unitIdx] : null;
   if(!m || !unit) return;
   const modNames = UNIT_INNATE_MODS[unit[1]];
@@ -978,7 +1025,7 @@ function grantInnateModsForUnit(memberId, unitIdx){
   });
 }
 function addPerkToMember(id, perkIdxStr){
-  const m = state.squad.members[id];
+  const m = getMember(id);
   if(!m || perkIdxStr === '') return;
   const idx = Number(perkIdxStr);
   const unit = (m.unitIdx!==null && m.unitIdx!==undefined) ? UNITS_DB[m.unitIdx] : null;
@@ -992,7 +1039,7 @@ function addPerkToMember(id, perkIdxStr){
   render();
 }
 function removePerkFromMember(id, pos){
-  const m = state.squad.members[id];
+  const m = getMember(id);
   if(!m) return;
   m.perks.splice(pos, 1);
   saveState();
@@ -1315,7 +1362,7 @@ function compatibleModInstancesForItem(hostItemIdx){
   });
 }
 function compatibleModInstancesForMember(memberId){
-  const m = state.squad.members[memberId];
+  const m = getMember(memberId);
   const slot = m ? unitModTypeForIdx(m.unitIdx) : null;
   if(!slot) return [];
   return itemsInWarehouse().filter(inst=>{
@@ -1333,17 +1380,23 @@ function attachMod(hostInstId, modInstId){
   saveState();
   render();
 }
+// A Master-owned host (negative holder) never returns anything to the shared Warehouse — its
+// detached mod is deleted outright instead, same rule as returnItemToWarehouse() below.
 function detachMod(hostInstId){
   const host = state.warehouse.items[hostInstId];
   if(!host || !host.modInstId) return;
-  const mod = state.warehouse.items[host.modInstId];
-  if(mod) mod.holder = 'warehouse';
+  if(typeof host.holder === 'number' && host.holder < 0){
+    delete state.warehouse.items[host.modInstId];
+  } else {
+    const mod = state.warehouse.items[host.modInstId];
+    if(mod) mod.holder = 'warehouse';
+  }
   delete host.modInstId;
   saveState();
   render();
 }
 function attachMemberMod(memberId, modInstId){
-  const m = state.squad.members[memberId];
+  const m = getMember(memberId);
   const mod = state.warehouse.items[modInstId];
   if(!m || !mod) return;
   if(!m.mods) m.mods = [];
@@ -1355,13 +1408,17 @@ function attachMemberMod(memberId, modInstId){
   render();
 }
 function detachMemberMod(memberId, modInstId){
-  const m = state.squad.members[memberId];
+  const m = getMember(memberId);
   if(!m || !m.mods) return;
   const pos = m.mods.indexOf(modInstId);
   if(pos<0) return;
   m.mods.splice(pos,1);
-  const mod = state.warehouse.items[modInstId];
-  if(mod) mod.holder = 'warehouse';
+  if(memberId < 0){
+    delete state.warehouse.items[modInstId]; // Master member — nothing returns to the Warehouse
+  } else {
+    const mod = state.warehouse.items[modInstId];
+    if(mod) mod.holder = 'warehouse';
+  }
   saveState();
   render();
 }
@@ -1387,8 +1444,9 @@ function attachModValue(hostInstId, value){
   if(value === '') return;
   const host = state.warehouse.items[hostInstId];
   if(!host) return;
+  const isMasterOwned = typeof host.holder === 'number' && host.holder < 0;
   if(value.startsWith('new:')){
-    if(!state.editMode) return;
+    if(!state.editMode && !isMasterOwned) return;
     attachMod(hostInstId, mintModInstance(Number(value.slice(4)), host.holder));
   } else {
     attachMod(hostInstId, Number(value));
@@ -1396,10 +1454,10 @@ function attachModValue(hostInstId, value){
 }
 function attachMemberModValue(memberId, value){
   if(value === '') return;
-  const m = state.squad.members[memberId];
+  const m = getMember(memberId);
   if(!m) return;
   if(value.startsWith('new:')){
-    if(!state.editMode) return;
+    if(!state.editMode && memberId >= 0) return;
     attachMemberMod(memberId, mintModInstance(Number(value.slice(4)), memberId));
   } else {
     attachMemberMod(memberId, Number(value));
@@ -1408,6 +1466,8 @@ function attachMemberModValue(memberId, value){
 // Rendered inside a host item's card (armor-card) — either the attached mod + detach button, or
 // an attach picker (Warehouse stock, plus a full-catalog option in edit mode). Nothing at all if
 // there's nothing to offer — no "no mods available" clutter on every unmoddable-right-now item.
+// A Master-owned host (negative holder) always behaves as if editMode is on and skips existing
+// Warehouse stock entirely — Master items are always freshly minted, never drawn from the shared pool.
 function modSlotHtml(hostInst){
   const it = ITEMS_DB[hostInst.itemIdx];
   const slot = it ? modSlotForCategory(it[1]) : null;
@@ -1417,11 +1477,12 @@ function modSlotHtml(hostInst){
     const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
     return `<span>Мод: ${modIt?modIt[2]:'?'} ${cardBtnHtml(modIt?modIt[2]:'', ITEM_CARD_BY_NAME)}</span> <button class="ghost" data-detachmod="${hostInst.id}">Открепить</button>`;
   }
-  let options = compatibleModInstancesForItem(hostInst.itemIdx).map(mi=>{
+  const isMasterOwned = typeof hostInst.holder === 'number' && hostInst.holder < 0;
+  let options = isMasterOwned ? '' : compatibleModInstancesForItem(hostInst.itemIdx).map(mi=>{
     const mit = ITEMS_DB[mi.itemIdx];
     return `<option value="${mi.id}">${mit[2]} (${mit[3]})</option>`;
   }).join('');
-  if(state.editMode) options += modCatalogOptionsHtml(slot, it[2]);
+  if(state.editMode || isMasterOwned) options += modCatalogOptionsHtml(slot, it[2]);
   if(!options) return '';
   return `<select data-modselect="${hostInst.id}" style="width:auto; max-width:150px;"><option value="">— мод —</option>${options}</select> <button data-attachmod="${hostInst.id}">+Мод</button>`;
 }
@@ -1786,7 +1847,7 @@ function deleteWarehouseItem(instId){
   Object.values(state.warehouse.items).forEach(other=>{
     if(other.modInstId === instId) delete other.modInstId;
   });
-  Object.values(state.squad.members).forEach(m=>{
+  [...Object.values(state.squad.members), ...Object.values(state.master.members)].forEach(m=>{
     if(m.mods){ const pos = m.mods.indexOf(instId); if(pos>=0) m.mods.splice(pos,1); }
   });
   delete state.warehouse.items[instId];
@@ -1802,18 +1863,25 @@ function assignItemToMember(instId, memberId){
   saveState();
   render();
 }
+// A Master-owned item (negative holder) never goes back to the shared Warehouse pool — removing
+// it from its NPC deletes it outright, same as the mod-detach rules above.
 function returnItemToWarehouse(instId){
   const inst = state.warehouse.items[instId];
   if(!inst) return;
-  inst.holder = 'warehouse';
-  if(inst.modInstId){ const mod = state.warehouse.items[inst.modInstId]; if(mod) mod.holder = 'warehouse'; }
+  if(typeof inst.holder === 'number' && inst.holder < 0){
+    if(inst.modInstId) delete state.warehouse.items[inst.modInstId];
+    delete state.warehouse.items[instId];
+  } else {
+    inst.holder = 'warehouse';
+    if(inst.modInstId){ const mod = state.warehouse.items[inst.modInstId]; if(mod) mod.holder = 'warehouse'; }
+  }
   saveState();
   render();
 }
 // Includes the member's own #id — two unnamed members with the same Unit would otherwise get
 // an identical label and their items would visually merge into one group below.
 function memberLabel(memberId){
-  const m = state.squad.members[memberId];
+  const m = getMember(memberId);
   if(!m) return `#${memberId}`;
   const unit = (m.unitIdx!==null && m.unitIdx!==undefined) ? UNITS_DB[m.unitIdx] : null;
   return `#${m.id} ${m.name || (unit ? unit[1] : 'без имени')}`;
@@ -1872,6 +1940,22 @@ function memberItemPoolOptionsHtml(excludeMemberId){
         .map(x=>`<option value="new:${x.i}">${x.it[2]}${x.it[4]?(' ['+x.it[4]+']'):''} — ${x.it[3]}</option>`).join('');
       html += `<optgroup label="${g} — новый, в обход склада">${opts}</optgroup>`;
     }
+  }
+  return html;
+}
+// Master's own "add item" list: always the full catalog as fresh-mint options, same "new:<idx>"
+// convention as squad's edit-mode bypass above — a Master NPC never draws from or lists the
+// shared Warehouse stock, so there's no separate "existing instances" section to build here.
+function masterItemPoolOptionsHtml(memberId){
+  const member = getMember(memberId);
+  const specialTag = member ? memberSpecialTag(member.unitIdx) : null;
+  const allowed = ITEMS_DB.map((it,i)=>({it,i})).filter(x=>x.it[1]!=='Mod' && !HIDDEN_ITEM_INDICES.has(x.i) && !INNATE_ONLY_WEAPON_IDX.has(x.i) && itemAllowedForMember(x.i, member, specialTag));
+  let html = `<option value="">— добавить предмет —</option>`;
+  const groups = [...new Set(allowed.map(x=>x.it[0]))];
+  for(const g of groups){
+    const opts = allowed.filter(x=>x.it[0]===g)
+      .map(x=>`<option value="new:${x.i}">${x.it[2]}${x.it[4]?(' ['+x.it[4]+']'):''} — ${x.it[3]}</option>`).join('');
+    html += `<optgroup label="${g}">${opts}</optgroup>`;
   }
   return html;
 }
@@ -2097,6 +2181,7 @@ function attachArmorControls(root){
 // Idempotent — safe to call on every load, does nothing once already migrated.
 function migrateSquadItems(){
   if(!state.warehouse) state.warehouse = { nextInstId: 1, items: {} };
+  if(!state.master) state.master = { members: {}, nextMemberId: 1, faction: '' };
   // Two separate edit-mode flags (squad.editMode, top-level buildEditMode) got unified into one
   // global state.editMode — fold whichever old flag(s) a save has into the new one and drop them.
   if(state.editMode === undefined){
@@ -2973,7 +3058,7 @@ function loadJSONFile(file){
       const parsed = JSON.parse(e.target.result);
       state = Object.assign(
         {landLevel:1, cells:{}, structures:{}, nextId:1, edges:{}, connectors:[], nextConnId:1,
-         squad:{members:{},nextMemberId:1}, warehouse:{nextInstId:1,items:{}},
+         squad:{members:{},nextMemberId:1}, master:{members:{},nextMemberId:1,faction:''}, warehouse:{nextInstId:1,items:{}},
          resources:{caps:0,resource:0}, editMode:false},
         parsed
       );
@@ -3976,12 +4061,15 @@ function render(){
   const layoutEl = document.getElementById('layoutView');
   const squadEl = document.getElementById('squadView');
   const warehouseEl = document.getElementById('warehouseView');
+  const masterEl = document.getElementById('masterView');
   if(layoutEl) layoutEl.style.display = view==='layout' ? 'flex' : 'none';
   if(squadEl) squadEl.style.display = view==='squad' ? 'block' : 'none';
   if(warehouseEl) warehouseEl.style.display = view==='warehouse' ? 'block' : 'none';
+  if(masterEl) masterEl.style.display = view==='master' ? 'block' : 'none';
   document.getElementById('viewLayoutBtn')?.classList.toggle('active', view==='layout');
   document.getElementById('viewSquadBtn')?.classList.toggle('active', view==='squad');
   document.getElementById('viewWarehouseBtn')?.classList.toggle('active', view==='warehouse');
+  document.getElementById('viewMasterBtn')?.classList.toggle('active', view==='master');
   // The top bar is static markup (not rebuilt by render()), so just sync the checkbox's own
   // state/color here instead of regenerating it.
   const editToggle = document.getElementById('globalEditModeToggle');
@@ -3996,6 +4084,8 @@ function render(){
     renderSquadView();
   } else if(view==='warehouse'){
     renderWarehouseView();
+  } else if(view==='master'){
+    renderMasterView();
   }
 }
 
@@ -4356,8 +4446,10 @@ function attachSquadEvents(){
   const btnClear = document.getElementById('btnClearSquad');
   if(btnClear) btnClear.onclick = ()=>{
     if(!confirm('Точно очистить весь ростер отряда? Это действие необратимо. (Предметы бойцов вернутся на склад.)')) return;
+    // Only squad-held items (positive holder) return to the Warehouse — Master NPCs (negative
+    // holder) are a separate roster and must never be touched by this button.
     Object.values(state.warehouse.items).forEach(inst=>{
-      if(inst.holder !== 'warehouse') inst.holder = 'warehouse';
+      if(typeof inst.holder === 'number' && inst.holder > 0) inst.holder = 'warehouse';
     });
     state.squad = { members: {}, nextMemberId: 1, faction: '' };
     saveState();
@@ -4439,6 +4531,227 @@ function attachSquadEvents(){
   });
   wrap.querySelectorAll('[data-delmember]').forEach(b=>{
     b.onclick = ()=>{ if(confirm('Удалить этого бойца из ростера? Его предметы вернутся на склад.')) deleteSquadMember(Number(b.dataset.delmember)); };
+  });
+  attachArmorControls(wrap);
+  enhanceCombos(wrap);
+}
+
+/* ============================= MASTER (GM) ROSTER RENDER =============================
+   Same unit catalog/cost/perk/mod rules as the player squad — deliberately reuses
+   capsForMember/unitBaseCost/itemChipHtml/leaderPerkOptionsHtml/perkOptionsHtml/cardBtnHtml as-is
+   — but no name field, none of Survival Mode's campaign tracking, and item add/remove always
+   behaves as if editMode were on while ignoring the shared Warehouse entirely (see
+   masterItemPoolOptionsHtml, and the negative-holder branches in returnItemToWarehouse/detachMod/
+   detachMemberMod/modSlotHtml/attachMemberModValue). */
+function renderMasterView(){
+  const wrap = document.getElementById('masterView');
+  if(!wrap) return;
+  const members = Object.values(state.master.members).sort((a,b)=>b.id-a.id);
+  const totalCaps = members.reduce((s,m)=>s+capsForMember(m), 0);
+  const masterFactions = [...new Set(UNITS_DB.map((u,i)=>({u,i})).filter(x=>!HIDDEN_UNIT_INDICES.has(x.i)).map(x=>x.u[0]))];
+
+  let html = `
+  <div class="squad-toolbar">
+    <div class="combo" style="min-width:200px;">
+      <select id="masterFactionSelect">
+        <option value="">— любая фракция —</option>
+        ${masterFactions.map(f=>`<option value="${f}" ${state.master.faction===f?'selected':''}>${f}</option>`).join('')}
+      </select>
+    </div>
+    <div class="combo" style="flex:1 1 240px; min-width:220px;">
+      <select class="combo-native combo-enhance" data-combo-mode="action" data-combo-placeholder="+ Добавить NPC — выбрать юнита…" id="addMasterUnitSelect">${unitOptionsHtml(null, state.master.faction)}</select>
+    </div>
+    <span class="squad-total">NPC: ${members.length} · Caps: ${totalCaps}</span>
+    <button class="danger" id="btnClearMaster">Очистить ростер мастера</button>
+  </div>
+  <div class="hint" style="margin-bottom:14px;">
+    Отдельный ростер для мастера — тот же каталог юнитов и та же стоимость, что и в «Отряд», но без
+    имён и учёта режима выживания (ранения/зависимость/fate/битвы). Предметы всегда выдаются сразу
+    (как в режиме редактирования) и никогда не попадают на общий склад — при удалении просто исчезают.
+  </div>
+  <div class="squad-grid">
+  `;
+
+  if(members.length===0){
+    html += `<div class="hint">Ростер мастера пуст. Нажмите "+ Добавить NPC".</div>`;
+  }
+
+  members.forEach(m=>{
+    const unit = (m.unitIdx!==null && m.unitIdx!==undefined) ? UNITS_DB[m.unitIdx] : null;
+    const caps = capsForMember(m);
+    const otherCaps = caps - (unit ? unit[2] : 0);
+    const heldItems = itemsHeldBy(m.id).filter(inst=>!isModIdx(inst.itemIdx));
+    const memberModSlot = unitModTypeForIdx(m.unitIdx);
+    const isDog = isDogUnitIdx(m.unitIdx);
+    const hidePerks = !!memberModSlot || isDog;
+    const innatePerks = unit && unit[3] ? unit[3] : [];
+    const displayId = -m.id;
+    html += `
+    <fieldset class="squad-card">
+      <legend>#${displayId} ${unit ? unit[1] : '— без юнита —'}${m.leader ? ' ★ Leader' : ''}</legend>
+
+      <label>Unit</label>
+      <div class="hint" style="font-size:14px;color:var(--green);margin:2px 0 10px;" title="Юнит закреплён при добавлении NPC и не меняется — чтобы сменить, удалите NPC и добавьте заново">
+        ${unit ? `${unit[0]} — ${unit[1]} (${unit[2]}) ${cardBtnHtml(unit[1], isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME)}` : '— юнит не выбран —'}
+      </div>
+
+      ${isAutomatronHeadIdx(m.unitIdx) ? `
+      <div class="row">
+        <div>
+          <label>Automatron: Торс</label>
+          <select data-field="automatronTorso" data-member="${m.id}">
+            <option value="">— выбрать —</option>
+            ${Object.keys(AUTOMATRON_TORSO_COST).filter(t => unit[1]==='Mr.Handy' ? t==='Mr Handy' : t!=='Mr Handy')
+              .map(t=>`<option value="${t}" ${m.automatronTorso===t?'selected':''}>${t} (${AUTOMATRON_TORSO_COST[t]})</option>`).join('')}
+          </select>
+          ${cardBtnHtml(m.automatronTorso, AUTOMATRON_TORSO_CARD_BY_NAME)}
+        </div>
+        <div>
+          <label>Automatron: Ноги</label>
+          <select data-field="automatronLegs" data-member="${m.id}">
+            <option value="">— выбрать —</option>
+            ${Object.keys(AUTOMATRON_LEGS_COST).map(l=>`<option value="${l}" ${m.automatronLegs===l?'selected':''}>${l} (${AUTOMATRON_LEGS_COST[l]})</option>`).join('')}
+          </select>
+          ${cardBtnHtml(m.automatronLegs, AUTOMATRON_LEGS_CARD_BY_NAME)}
+        </div>
+      </div>
+      ${(!m.automatronTorso || !m.automatronLegs) ? '<div class="hint" style="color:var(--amber);">Сборка не завершена — выберите торс и ноги.</div>' : ''}
+      ` : ''}
+
+      <div class="row">
+        <div>${hidePerks ? '' : `<label><input type="checkbox" data-field="leader" data-member="${m.id}" ${m.leader?'checked':''}> Leader</label>`}</div>
+        <div>${isDog ? '' : (()=>{
+          const heroicName = memberModSlot==='Robot Mod' ? 'Clunky' : memberModSlot==='Creature Mod' ? 'Wild' : 'Heroic';
+          const heroicLabel = memberModSlot==='Robot Mod'?'Clunky (−20%)':memberModSlot==='Creature Mod'?'Wild (−20%)':'Heroic (48)';
+          return `<label><input type="checkbox" data-field="heroic" data-member="${m.id}" ${m.heroic?'checked':''}> ${heroicLabel}</label> ${m.heroic ? cardBtnHtml(heroicName, HEROIC_CARD_BY_NAME) : ''}`;
+        })()}</div>
+      </div>
+
+      ${m.leader && !hidePerks ? `
+      <label>Leader Perk</label>
+      <div class="combo" style="display:flex;align-items:center;gap:6px;">
+        <select class="combo-native combo-enhance" data-combo-mode="value" data-combo-placeholder="Поиск лидерского перка…" data-field="leaderPerk" data-member="${m.id}">${leaderPerkOptionsHtml(m.leaderPerk)}</select>
+        ${(m.leaderPerk!==null && m.leaderPerk!==undefined && LEADER_PERKS_DB[m.leaderPerk]) ? cardBtnHtml(LEADER_PERKS_DB[m.leaderPerk][0], LEADER_PERK_CARD_BY_NAME) : ''}
+      </div>
+      ` : ''}
+
+      ${!hidePerks ? `
+      <label>Perks</label>
+      <div class="tag-list">
+        ${innatePerks.map(pidx=>`<span class="tag" style="opacity:0.8;" title="Врождённый перк юнита — бесплатный, убрать нельзя">🔒 ${PERKS_DB[pidx]?PERKS_DB[pidx][0]:'?'} (0) ${cardBtnHtml(PERKS_DB[pidx]?PERKS_DB[pidx][0]:'', PERK_CARD_BY_NAME)}</span>`).join('')}
+        ${m.perks.map((idx,pos)=>`<span class="tag">${PERKS_DB[idx]?PERKS_DB[idx][0]:'?'} (${PERKS_DB[idx]?PERKS_DB[idx][1]:0}) ${cardBtnHtml(PERKS_DB[idx]?PERKS_DB[idx][0]:'', PERK_CARD_BY_NAME)} <b data-removeperk="${m.id}" data-pos="${pos}">✕</b></span>`).join('')}
+        ${(!innatePerks.length && !m.perks.length) ? '<span class="small-note">нет</span>' : ''}
+      </div>
+      <div class="combo">
+        <select class="combo-native combo-enhance" data-combo-mode="action" data-combo-placeholder="Добавить перк…" data-addperk="${m.id}">${perkOptionsHtml([...innatePerks, ...m.perks])}</select>
+      </div>
+      ` : ''}
+
+      <label>Items</label>
+      <div class="tag-list">
+        ${heldItems.length ? heldItems.map(inst=> itemChipHtml(inst, `data-removeitem="${inst.id}"`, inst.innate && !!memberSpecialTag(m.unitIdx))).join('') : '<span class="small-note">нет</span>'}
+      </div>
+      <div class="combo">
+        <select class="combo-native combo-enhance" data-combo-mode="action" data-combo-placeholder="Добавить предмет…" data-additem="${m.id}">${masterItemPoolOptionsHtml(m.id)}</select>
+      </div>
+
+      ${memberModSlot ? `
+      <label>Моды юнита (${memberModSlot}) — ${(m.mods||[]).length}/${getModCapForUnit(m.unitIdx)}</label>
+      <div class="tag-list">
+        ${(m.mods||[]).map(modId=>{
+          const modInst = state.warehouse.items[modId];
+          const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
+          return `<span class="tag">${modIt?modIt[2]:'?'} (${modIt?modIt[3]:0}) ${cardBtnHtml(modIt?modIt[2]:'', ITEM_CARD_BY_NAME)} <b data-detachmembermod="${m.id}" data-modinst="${modId}">✕</b></span>`;
+        }).join('') || '<span class="small-note">нет</span>'}
+      </div>
+      ${(m.mods||[]).length < getModCapForUnit(m.unitIdx) ? `
+      <div class="combo">
+        <select class="combo-native combo-enhance" data-combo-mode="action" data-combo-placeholder="Прикрепить мод…" data-addmembermod="${m.id}">
+          <option value="">— выбрать мод —</option>
+          ${modCatalogOptionsHtml(memberModSlot, null)}
+        </select>
+      </div>` : ''}
+      ` : ''}
+
+      <div class="caps-line">Caps: ${caps}<br><small>Unit ${unit?unit[2]:0} + остальное (Heroic/Leader Perk/Perks/Items) ${otherCaps}</small></div>
+
+      <button class="danger" data-delmastermember="${m.id}">Удалить NPC</button>
+    </fieldset>`;
+  });
+
+  html += `</div>`;
+  wrap.innerHTML = html;
+  attachMasterEvents();
+}
+
+function attachMasterEvents(){
+  const wrap = document.getElementById('masterView');
+  if(!wrap) return;
+
+  const masterFactionSelect = document.getElementById('masterFactionSelect');
+  if(masterFactionSelect) masterFactionSelect.onchange = (e)=>{
+    state.master.faction = e.target.value;
+    saveState();
+    render();
+  };
+  const addMasterUnitSelect = document.getElementById('addMasterUnitSelect');
+  if(addMasterUnitSelect) addMasterUnitSelect.onchange = (e)=>{
+    const val = e.target.value;
+    if(val === '') return;
+    addMasterMemberWithUnit(Number(val));
+  };
+  const btnClearMaster = document.getElementById('btnClearMaster');
+  if(btnClearMaster) btnClearMaster.onclick = ()=>{
+    if(!confirm('Точно очистить весь ростер мастера? Это действие необратимо — предметы NPC не возвращаются на склад.')) return;
+    Object.values(state.warehouse.items).forEach(inst=>{
+      if(typeof inst.holder === 'number' && inst.holder < 0) delete state.warehouse.items[inst.id];
+    });
+    state.master = { members: {}, nextMemberId: 1, faction: '' };
+    saveState();
+    render();
+  };
+
+  wrap.querySelectorAll('[data-field]').forEach(el=>{
+    const id = Number(el.dataset.member);
+    const field = el.dataset.field;
+    el.onchange = (e)=>{
+      if(field==='leader'){ setSquadLeader(id); return; }
+      let val;
+      if(el.type==='checkbox') val = e.target.checked;
+      else if(field==='leaderPerk') val = e.target.value===''? null : Number(e.target.value);
+      else val = e.target.value;
+      updateSquadMember(id, field, val, true);
+    };
+  });
+  wrap.querySelectorAll('[data-addperk]').forEach(sel=>{
+    sel.onchange = (e)=>{ addPerkToMember(Number(sel.dataset.addperk), e.target.value); };
+  });
+  wrap.querySelectorAll('[data-removeperk]').forEach(b=>{
+    b.onclick = ()=> removePerkFromMember(Number(b.dataset.removeperk), Number(b.dataset.pos));
+  });
+  wrap.querySelectorAll('[data-additem]').forEach(sel=>{
+    sel.onchange = (e)=>{
+      const val = e.target.value;
+      if(val === '') return;
+      const memberId = Number(sel.dataset.additem);
+      if(val.startsWith('new:')) createItemForMember(memberId, Number(val.slice(4)));
+    };
+  });
+  wrap.querySelectorAll('[data-removeitem]').forEach(b=>{
+    b.onclick = ()=> returnItemToWarehouse(Number(b.dataset.removeitem)); // negative holder -> deletes outright
+  });
+  wrap.querySelectorAll('[data-addmembermod]').forEach(sel=>{
+    sel.onchange = (e)=>{
+      const val = e.target.value;
+      if(val === '') return;
+      attachMemberModValue(Number(sel.dataset.addmembermod), val);
+    };
+  });
+  wrap.querySelectorAll('[data-detachmembermod]').forEach(b=>{
+    b.onclick = ()=> detachMemberMod(Number(b.dataset.detachmembermod), Number(b.dataset.modinst));
+  });
+  wrap.querySelectorAll('[data-delmastermember]').forEach(b=>{
+    b.onclick = ()=>{ if(confirm('Удалить этого NPC из ростера мастера?')) deleteMasterMember(Number(b.dataset.delmastermember)); };
   });
   attachArmorControls(wrap);
   enhanceCombos(wrap);
