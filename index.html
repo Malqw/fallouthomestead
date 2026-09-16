@@ -3476,18 +3476,41 @@ function openPrintRosterWindow(title, bodyHtml){
          one fixed weapon + a mod or two, so there's plenty of spare width/height per unit to grow
          into once the Battle Recording strip is gone. Explicit per-page grid (not "whatever
          happens to fit") is what actually guarantees 4/page regardless of content. ---- */
+      /* height is 194mm's full printable-area math MINUS the cost-header line above the very
+         first page — without that slack the first page's grid doesn't fit next to the header and
+         gets pushed whole onto a second page, leaving an almost-blank page 1. A few mm of margin
+         below that on every page rather than trying to special-case just the first one. */
       .pm-page{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
-        gap:5mm; height:194mm; page-break-before:always; }
+        gap:5mm; height:184mm; page-break-before:always; }
       .pm-page:first-of-type{ page-break-before:auto; }
       .pm-unit{ border:1px solid #ccc; border-radius:2px; padding:4px 6px; box-sizing:border-box;
-        display:flex; flex-direction:column; overflow:hidden; }
+        display:flex; flex-direction:column; overflow:hidden; break-inside:avoid; }
       .pm-unit-name{ font-weight:bold; font-size:16px; margin-bottom:4px; flex:0 0 auto; }
       .pm-unit-row{ display:flex; gap:10px; align-items:flex-start; flex:1 1 auto; min-height:0; }
-      .pm-unit-imgcol{ display:flex; flex-direction:column; gap:3px; flex:0 0 auto; height:100%; }
-      .pm-unit-img{ width:auto; height:auto; max-height:100%; max-width:210px; object-fit:contain; display:block; }
-      .pm-items-grid{ flex:1 1 auto; display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; min-width:0; height:100%; }
-      .pm-item-box{ position:relative; height:120px; width:auto; aspect-ratio:3/2; display:flex;
+      /* Fixed px sizes throughout (never a %-of-ancestor height) — a height chained through
+         grid -> flex-column -> flex-item -> percentage children is exactly the kind of thing that
+         renders fine on screen but overlaps/collapses once an actual print engine gets involved
+         (that's what caused item cards to land on top of the portrait instead of beside it). */
+      .pm-unit-imgcol{ display:flex; flex-direction:column; gap:3px; flex:0 0 auto; }
+      .pm-unit-img{ width:auto; height:auto; max-height:270px; max-width:180px; object-fit:contain; display:block; }
+      /* .p-cardwrap (from printCardImgHtml) is hardcoded to squad's 132px card width — see its own
+         comment above about why that's a fixed px value, not "auto". Master's portrait is bigger,
+         so it needs the same treatment at its own width or the image overflows its wrapper's
+         reserved layout box and visually overlaps the items column beside it (the wrapper doesn't
+         grow to match an overflowing child). */
+      .pm-unit-imgcol .p-cardwrap{ width:180px; }
+      /* 2 columns of item/perk cards next to the portrait — up to 4 (2x2) at full size; a unit
+         with more than that (rare) gets the .pm-items-grid-compact modifier (added in JS) which
+         shrinks the cards so 2x3 (6) still fit before it has to wrap into a 4th row. Heights below
+         are chosen so each card's own 3:2-aspect-ratio WIDTH also fits 2 columns in the space left
+         beside the portrait — a card sized purely to fit the available height (as a first pass
+         did) came out wider than that and visibly overlapped the portrait instead of sitting
+         beside it, since grid/flex items don't shrink below their own content size on their own. */
+      .pm-items-grid{ flex:1 1 auto; display:grid; grid-template-columns:1fr 1fr; gap:6px;
+        align-content:start; justify-items:center; min-width:0; }
+      .pm-item-box{ position:relative; height:100px; width:auto; aspect-ratio:3/2; min-width:0; display:flex;
         align-items:center; justify-content:center; overflow:hidden; }
+      .pm-items-grid-compact .pm-item-box{ height:78px; }
       .pm-item-img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
       .pm-item-box.p-noimg{ border:1px dashed #999; font-size:11px; text-align:center; padding:3px; box-sizing:border-box; width:160px; }
       @media print{ .noprint{ display:none; } }
@@ -3529,52 +3552,57 @@ function buildPrintMasterHtml(){
       if(m.automatronLegs) autoHtml += printCardImgHtml(m.automatronLegs, AUTOMATRON_LEGS_CARD_BY_NAME, 'pm-unit-img');
     }
 
-    let cardsHtml = '';
+    // Collected as an array (not concatenated straight into a string) so we can count how many
+    // cards there are before deciding the grid size — see the 2x2/2x3 comment on .pm-items-grid.
+    const cardBits = [];
     if(m.heroic && !isDog){
       const heroicName = memberModSlot==='Robot Mod' ? 'Clunky' : memberModSlot==='Creature Mod' ? 'Wild' : 'Heroic';
       const isAutoForHeroic = isAutomatronHeadIdx(m.unitIdx);
       let heroicCost = 0;
       if(memberModSlot && !(isAutoForHeroic && automatronClunkyBlocked(m))) heroicCost = -Math.ceil(unitBaseCost(m) * 0.2);
       else if(!memberModSlot) heroicCost = 48;
-      cardsHtml += printCardBoxHtml(heroicName, HEROIC_CARD_BY_NAME, heroicCost, false, 'pm-item-box', 'pm-item-img');
+      cardBits.push(printCardBoxHtml(heroicName, HEROIC_CARD_BY_NAME, heroicCost, false, 'pm-item-box', 'pm-item-img'));
     }
     if(m.leader && !hidePerks && m.leaderPerk!==null && m.leaderPerk!==undefined && LEADER_PERKS_DB[m.leaderPerk]){
-      cardsHtml += printCardBoxHtml(LEADER_PERKS_DB[m.leaderPerk][0], LEADER_PERK_CARD_BY_NAME, LEADER_PERKS_DB[m.leaderPerk][1], false, 'pm-item-box', 'pm-item-img');
+      cardBits.push(printCardBoxHtml(LEADER_PERKS_DB[m.leaderPerk][0], LEADER_PERK_CARD_BY_NAME, LEADER_PERKS_DB[m.leaderPerk][1], false, 'pm-item-box', 'pm-item-img'));
     }
     if(!hidePerks){
-      cardsHtml += innatePerks.map(pidx=>{
+      innatePerks.forEach(pidx=>{
         const p = PERKS_DB[pidx];
-        return p ? printCardBoxHtml(p[0], PERK_CARD_BY_NAME, 0, false, 'pm-item-box', 'pm-item-img') : '';
-      }).join('');
-      cardsHtml += m.perks.map(pidx=>{
+        if(p) cardBits.push(printCardBoxHtml(p[0], PERK_CARD_BY_NAME, 0, false, 'pm-item-box', 'pm-item-img'));
+      });
+      m.perks.forEach(pidx=>{
         const p = PERKS_DB[pidx];
-        return p ? printCardBoxHtml(p[0], PERK_CARD_BY_NAME, p[1], false, 'pm-item-box', 'pm-item-img') : '';
-      }).join('');
+        if(p) cardBits.push(printCardBoxHtml(p[0], PERK_CARD_BY_NAME, p[1], false, 'pm-item-box', 'pm-item-img'));
+      });
     }
-    cardsHtml += heldItems.map(inst=>{
+    heldItems.forEach(inst=>{
       const it = ITEMS_DB[inst.itemIdx];
-      if(!it) return '';
-      let html = printCardBoxHtml(it[2], ITEM_CARD_BY_NAME, it[3], it[1]==='Power Armor', 'pm-item-box', 'pm-item-img');
+      if(!it) return;
+      cardBits.push(printCardBoxHtml(it[2], ITEM_CARD_BY_NAME, it[3], it[1]==='Power Armor', 'pm-item-box', 'pm-item-img'));
       if(inst.modInstId){
         const modInst = state.warehouse.items[inst.modInstId];
         const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
-        if(modIt) html += printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3], modIt[1]==='Power Armor', 'pm-item-box', 'pm-item-img');
+        if(modIt) cardBits.push(printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3], modIt[1]==='Power Armor', 'pm-item-box', 'pm-item-img'));
       }
-      return html;
-    }).join('');
+    });
     if(memberModSlot){
-      cardsHtml += (m.mods||[]).map(modId=>{
+      (m.mods||[]).forEach(modId=>{
         const modInst = state.warehouse.items[modId];
         const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
-        return modIt ? printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3], false, 'pm-item-box', 'pm-item-img') : '';
-      }).join('');
+        if(modIt) cardBits.push(printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3], false, 'pm-item-box', 'pm-item-img'));
+      });
     }
+    // 2 columns either way — up to 4 cards (2x2) at full size, more than that (rare — a GM's
+    // units are almost never this loaded out) shrinks to 2x3 so 6 still fit before it has to wrap
+    // further. See .pm-items-grid-compact.
+    const itemsGridCls = cardBits.length > 4 ? 'pm-items-grid pm-items-grid-compact' : 'pm-items-grid';
 
     return `<div class="pm-unit">
       <div class="pm-unit-name">#${memberDisplayIndex(m.id)} ${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}</div>
       <div class="pm-unit-row">
         <div class="pm-unit-imgcol">${unitImgHtml}${autoHtml}</div>
-        <div class="pm-items-grid">${cardsHtml || '<span class="p-hint">нет предметов/перков</span>'}</div>
+        <div class="${itemsGridCls}">${cardBits.join('') || '<span class="p-hint">нет предметов/перков</span>'}</div>
       </div>
     </div>`;
   });
