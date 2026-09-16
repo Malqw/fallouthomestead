@@ -3471,21 +3471,26 @@ function openPrintRosterWindow(title, bodyHtml){
       .p-refpage{ page-break-before:always; display:flex; align-items:center; justify-content:center;
         gap:8mm; flex-wrap:wrap; height:190mm; }
       .p-refpage img{ max-width:31%; max-height:100%; object-fit:contain; }
-      /* ---- Master (GM) roster print: bigger cards than the squad's, 4 per page in a fixed 2x2
-         grid instead of squad's naturally-flowing stack — GM units rarely carry more than their
-         one fixed weapon + a mod or two, so there's plenty of spare width/height per unit to grow
-         into once the Battle Recording strip is gone. Explicit per-page grid (not "whatever
-         happens to fit") is what actually guarantees 4/page regardless of content. ---- */
-      /* height is 194mm's full printable-area math MINUS the cost-header line above the very
-         first page — without that slack the first page's grid doesn't fit next to the header and
-         gets pushed whole onto a second page, leaving an almost-blank page 1. A few mm of margin
-         below that on every page rather than trying to special-case just the first one. */
-      .pm-page{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
-        gap:5mm; height:184mm; page-break-before:always; }
+      /* ---- Master (GM) roster print: bigger cards than the squad's, 4 per page in a 2x2 grid
+         instead of squad's naturally-flowing stack — GM units rarely carry more than their one
+         fixed weapon + a mod or two, so there's plenty of spare width/height per unit to grow into
+         once the Battle Recording strip is gone. Explicit per-4-units grouping (page-break-before
+         on each new group) is what guarantees 4/page regardless of content — NOT a page-height
+         box: an earlier version gave .pm-page a fixed mm height sized to the nominal @page/margin
+         math, which keeps coming out wrong against a real print engine's actual usable area
+         (already flagged as unreliable once, in the squad print's own comments about the browser
+         print dialog's "Default" margins eating more space than the @page rule promises) — a grid
+         claiming the FULL page height left no room for the cost-header line above the first
+         group, so page 1 overflowed to page 2 and came out blank. Letting each unit size to its
+         own natural (bounded) content height instead means the group is always comfortably
+         SHORTER than a page, whatever the real usable area turns out to be — the tradeoff is some
+         blank space at the bottom of each page instead of a perfect fill, which is the right side
+         to err on. */
+      .pm-page{ display:grid; grid-template-columns:1fr 1fr; gap:5mm; page-break-before:always; }
       .pm-page:first-of-type{ page-break-before:auto; }
       .pm-unit{ border:1px solid #ccc; border-radius:2px; padding:4px 6px; box-sizing:border-box;
         display:flex; flex-direction:column; overflow:hidden; break-inside:avoid; }
-      .pm-unit-name{ font-weight:bold; font-size:16px; margin-bottom:4px; flex:0 0 auto; }
+      .pm-unit-name{ font-weight:bold; font-size:13px; margin-bottom:3px; flex:0 0 auto; }
       .pm-unit-row{ display:flex; gap:10px; align-items:flex-start; flex:1 1 auto; min-height:0; }
       /* Fixed px sizes throughout (never a %-of-ancestor height) — a height chained through
          grid -> flex-column -> flex-item -> percentage children is exactly the kind of thing that
