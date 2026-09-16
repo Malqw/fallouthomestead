@@ -3486,8 +3486,17 @@ function openPrintRosterWindow(title, bodyHtml){
          SHORTER than a page, whatever the real usable area turns out to be — the tradeoff is some
          blank space at the bottom of each page instead of a perfect fill, which is the right side
          to err on. */
-      .pm-page{ display:grid; grid-template-columns:1fr 1fr; gap:5mm; page-break-before:always; }
-      .pm-page:first-of-type{ page-break-before:auto; }
+      /* Break before every group EXCEPT the first. ":first-of-type" looked right but isn't — it
+         means "first sibling of this TAG name", and the cost-header div sitting right before the
+         first .pm-page is ALSO a <div>, so it — not any .pm-page — was claiming that slot. That
+         left NO .pm-page ever matching :first-of-type, so the base always-break rule applied to
+         every group including the first one, forcing it onto page 2 and leaving page 1 blank
+         (the actual bug — not a height/margin issue, despite the last two fixes assuming so). The
+         general sibling combinator below only matches a .pm-page that has an earlier .pm-page
+         sibling, regardless of what other elements (like the header) come before the very first
+         one — exactly "not the first group", however it happens to be arranged in the DOM. */
+      .pm-page{ display:grid; grid-template-columns:1fr 1fr; gap:5mm; }
+      .pm-page ~ .pm-page{ page-break-before:always; }
       .pm-unit{ border:1px solid #ccc; border-radius:2px; padding:4px 6px; box-sizing:border-box;
         display:flex; flex-direction:column; overflow:hidden; break-inside:avoid; }
       .pm-unit-name{ font-weight:bold; font-size:13px; margin-bottom:3px; flex:0 0 auto; }
