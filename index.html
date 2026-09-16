@@ -198,7 +198,10 @@
   .wh-type-btn:hover{ opacity:0.9; }
   .wh-type-btn.active{ opacity:1; border-color:var(--green); box-shadow:0 0 0 1px var(--green); }
   #cardLightbox{
-    display:none; position:fixed; inset:0; z-index:1000; background:rgba(3,18,10,0.92);
+    /* Higher than #itemPickerModal (below) so previewing a card from inside the picker renders
+       in front of it, not behind — same z-index plus later DOM order would otherwise let the
+       modal win regardless of open/close timing. */
+    display:none; position:fixed; inset:0; z-index:1100; background:rgba(3,18,10,0.92);
     align-items:center; justify-content:center; cursor:zoom-out; padding:20px;
   }
   #cardLightbox.open{ display:flex; }
@@ -231,6 +234,11 @@
   .ip-row-name{ flex:1; }
   .ip-row-preview{ flex:0 0 auto; }
   .ip-empty{ padding:10px; opacity:0.7; }
+  .ip-group-header{
+    padding:8px 8px 4px; margin-top:6px; font-size:12px; text-transform:uppercase;
+    letter-spacing:0.04em; opacity:0.6; border-bottom:1px solid var(--panel-edge);
+  }
+  .ip-group-header:first-child{ margin-top:0; }
 
   /* ---- Squad / Roster tab ---- */
   .squad-view{ flex:1; overflow-y:auto; padding:16px; min-height:0; }
@@ -807,7 +815,7 @@ let connectorFirstCell = null;
 let inspectSelectedId = null;
 let pendingEdgeStart = null; // {r,c} vertex awaiting a second click to complete a fence/barricade/ladder segment
 let zoomScale = 1, panX = 0, panY = 0; // stage view transform — pinch/drag on touch, wheel/drag on desktop
-let itemPickerFilterType = ''; // ITEMS_DB[i][1] to narrow the Item Picker modal's list by, '' = all
+let itemPickerFilterTypes = new Set(); // ITEMS_DB[i][1] values to narrow the Item Picker's list by — empty = show all types
 let itemPickerSearchText = '';
 const ZOOM_MIN = 0.4, ZOOM_MAX = 4;
 let edgeTool = 'fence';        // fence | barricade | ladder | erase — chosen BEFORE clicking, per improvement #1
@@ -3953,29 +3961,40 @@ function attachWarehouseEvents(){
    straight to the Warehouse (see renderWarehouseView's "+ Добавить предмет" button). Stays open
    after each add so several items can be picked in a row; toast() confirms each add. ---- */
 function itemPickerTypeFilterHtml(){
-  return `<button type="button" class="wh-type-btn ${itemPickerFilterType===''?'active':''}" data-ipfiltertype="" title="Все категории">Все</button>
+  return `<button type="button" class="wh-type-btn ${itemPickerFilterTypes.size===0?'active':''}" data-ipfiltertype="" title="Сбросить фильтр">Все</button>
     ${Object.entries(ITEM_TYPE_ICON).map(([type,icon])=>
-      `<button type="button" class="wh-type-btn ${itemPickerFilterType===type?'active':''}" data-ipfiltertype="${type}" title="${type}"><img src="icons/${icon}" alt="${type}"></button>`
+      `<button type="button" class="wh-type-btn ${itemPickerFilterTypes.has(type)?'active':''}" data-ipfiltertype="${type}" title="${type}"><img src="icons/${icon}" alt="${type}"></button>`
     ).join('')}`;
 }
+// Grouped by ITEMS_DB[i][0] (the item's rarity/tier — Advanced/Hightech/Wasteland/etc, same
+// grouping the old <optgroup> dropdown used) so the list keeps that separation instead of one
+// flat alphabetical-by-DB-order dump. A group with nothing matching the search/type filter is
+// skipped entirely rather than showing an empty header.
 function itemPickerListHtml(){
   const q = itemPickerSearchText.trim().toLowerCase();
-  const rows = ITEMS_DB.map((it,i)=>({it,i})).filter(x=>
-    !HIDDEN_ITEM_INDICES.has(x.i) &&
-    (!itemPickerFilterType || x.it[1]===itemPickerFilterType) &&
-    (!q || x.it[2].toLowerCase().includes(q))
-  );
-  if(!rows.length) return `<div class="ip-empty">Ничего не найдено.</div>`;
-  return rows.map(({it,i})=>{
-    const icon = ITEM_TYPE_ICON[it[1]];
-    const iconHtml = icon ? `<img class="ip-row-icon" src="icons/${icon}" alt="${it[1]}" title="${it[1]}">` : `<span class="ip-row-icon"></span>`;
-    const preview = cardBtnHtml(it[2], ITEM_CARD_BY_NAME).replace('class="card-btn"', 'class="card-btn ip-row-preview"');
-    return `<div class="ip-row" data-ipadd="${i}">
-      ${iconHtml}
-      <span class="ip-row-name">${it[2]}${it[4]?(' ['+it[4]+']'):''} — ${it[3]}</span>
-      ${preview}
-    </div>`;
+  const groups = [...new Set(ITEMS_DB.map(it=>it[0]))];
+  let anyRows = false;
+  const html = groups.map(g=>{
+    const rows = ITEMS_DB.map((it,i)=>({it,i})).filter(x=>
+      x.it[0]===g && !HIDDEN_ITEM_INDICES.has(x.i) &&
+      (itemPickerFilterTypes.size===0 || itemPickerFilterTypes.has(x.it[1])) &&
+      (!q || x.it[2].toLowerCase().includes(q))
+    );
+    if(!rows.length) return '';
+    anyRows = true;
+    const rowsHtml = rows.map(({it,i})=>{
+      const icon = ITEM_TYPE_ICON[it[1]];
+      const iconHtml = icon ? `<img class="ip-row-icon" src="icons/${icon}" alt="${it[1]}" title="${it[1]}">` : `<span class="ip-row-icon"></span>`;
+      const preview = cardBtnHtml(it[2], ITEM_CARD_BY_NAME).replace('class="card-btn"', 'class="card-btn ip-row-preview"');
+      return `<div class="ip-row" data-ipadd="${i}">
+        ${iconHtml}
+        <span class="ip-row-name">${it[2]}${it[4]?(' ['+it[4]+']'):''} — ${it[3]}</span>
+        ${preview}
+      </div>`;
+    }).join('');
+    return `<div class="ip-group-header">${g}</div>${rowsHtml}`;
   }).join('');
+  return anyRows ? html : `<div class="ip-empty">Ничего не найдено.</div>`;
 }
 function renderItemPicker(){
   const typeFilterEl = document.getElementById('itemPickerTypeFilter');
@@ -3985,7 +4004,13 @@ function renderItemPicker(){
   const modal = document.getElementById('itemPickerModal');
   if(!modal) return;
   modal.querySelectorAll('[data-ipfiltertype]').forEach(b=>{
-    b.onclick = ()=>{ itemPickerFilterType = b.dataset.ipfiltertype; renderItemPicker(); };
+    b.onclick = ()=>{
+      const t = b.dataset.ipfiltertype;
+      if(t === '') itemPickerFilterTypes.clear();
+      else if(itemPickerFilterTypes.has(t)) itemPickerFilterTypes.delete(t);
+      else itemPickerFilterTypes.add(t);
+      renderItemPicker();
+    };
   });
   modal.querySelectorAll('.ip-row').forEach(row=>{
     row.onclick = (e)=>{
@@ -4000,7 +4025,7 @@ function openItemPicker(){
   const modal = document.getElementById('itemPickerModal');
   if(!modal) return;
   itemPickerSearchText = '';
-  itemPickerFilterType = '';
+  itemPickerFilterTypes.clear();
   modal.classList.add('open');
   renderItemPicker();
   const search = document.getElementById('itemPickerSearch');
