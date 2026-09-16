@@ -1496,7 +1496,6 @@ const ROBOT_WEAPON_FAMILY = {
 };
 const ROBOT_UNIVERSAL_ITEM_NAMES = new Set(['Bowler Hat','Triggerman Bowler','Robot Repair Kit']);
 const MR_HANDY_FAMILY_UNITS = new Set(['Mr Handy','Mr.Handy','Miss Nanny','Mr Gutsy','Mr.Gutsy']);
-const MR_HANDY_BONUS_NAMES = new Set(['Mr Handy Fuel','Third-Arm Clamp']);
 const NON_ROBO_WEAPON_CATS = ['Rifle','Pistol','Melee','Heavy','Thrown'];
 function countHeldItemsMatching(memberId, predicate){
   return itemsHeldBy(memberId).filter(predicate).length;
@@ -1514,7 +1513,13 @@ function robotItemAllowed(itemIdx, member){
   if(family && family.names.includes(name)){
     return countHeldItemsMatching(member.id, inst => family.names.includes(ITEMS_DB[inst.itemIdx][2])) < family.max;
   }
-  if(MR_HANDY_FAMILY_UNITS.has(unitName) && MR_HANDY_BONUS_NAMES.has(name)) return true;
+  if(MR_HANDY_FAMILY_UNITS.has(unitName) && name === 'Third-Arm Clamp') return true;
+  // Only one Robot Item ("gear" slot, not a weapon/mod/clothing) at a time — currently just Mr
+  // Handy Fuel exists in the DB, but written as a count check rather than an unconditional true
+  // so a second one added later needs a deliberate decision, not silent stacking.
+  if(MR_HANDY_FAMILY_UNITS.has(unitName) && name === 'Mr Handy Fuel'){
+    return countHeldItemsMatching(member.id, inst => ITEMS_DB[inst.itemIdx][2]==='Mr Handy Fuel') < 1;
+  }
   if(unitName === 'Robobrain' && name === 'Robobrain Arms') return true;
   if(!NON_ROBO_WEAPON_CATS.includes(cat) || !isNonRobotTaggedIdx(itemIdx)) return false;
   const hasThirdArmClamp = countHeldItemsMatching(member.id, inst => ITEMS_DB[inst.itemIdx][2]==='Third-Arm Clamp') > 0;
@@ -1570,7 +1575,9 @@ function automatronItemAllowed(itemIdx, member){
   const name = it[2], cat = it[1];
   if(ROBOT_UNIVERSAL_ITEM_NAMES.has(name)) return true;
   if(torso === 'Mr Handy' && name === 'Third-Arm Clamp') return true;
-  if(headName==='Mr Handy' && torso==='Mr Handy' && member.automatronLegs==='Mr Handy' && name==='Mr Handy Fuel') return true;
+  if(headName==='Mr Handy' && torso==='Mr Handy' && member.automatronLegs==='Mr Handy' && name==='Mr Handy Fuel'){
+    return countHeldItemsMatching(member.id, inst => ITEMS_DB[inst.itemIdx][2]==='Mr Handy Fuel') < 1;
+  }
   if(headName === 'Robobrain' && name === 'Robobrain Arms') return true;
   const hasRobobrainArms = countHeldItemsMatching(member.id, inst => ITEMS_DB[inst.itemIdx][2]==='Robobrain Arms') > 0;
   const isRoboTagged = !isNonRobotTaggedIdx(itemIdx);
@@ -1597,9 +1604,22 @@ function automatronItemAllowed(itemIdx, member){
   }
   return false;
 }
+// Chemical Coating / Dead Man's Switch are the Creature's "Gear"-slot items (as opposed to its
+// Armor/Clothes-slot ones — Corrugated Plates, Spiked Harness, Tesla Coil Harness, Limb Braces —
+// which are a normal single-item-per-category deal and stay under the plain species-tag check
+// below); WW only lets a Creature carry ONE such Gear item, not both at once.
+const CREATURE_GEAR_ITEM_NAMES = new Set(['Chemical Coating', "Dead Man's Switch"]);
+function creatureItemAllowed(itemIdx, member){
+  const it = ITEMS_DB[itemIdx];
+  if(CREATURE_GEAR_ITEM_NAMES.has(it[2])){
+    return countHeldItemsMatching(member.id, inst => CREATURE_GEAR_ITEM_NAMES.has(ITEMS_DB[inst.itemIdx][2])) < 1;
+  }
+  return itemAllowedForTag(itemIdx, 'creature');
+}
 function itemAllowedForMember(itemIdx, member, specialTag){
   if(member && isAutomatronHeadIdx(member.unitIdx)) return automatronItemAllowed(itemIdx, member);
   if(specialTag === 'robot' && member) return robotItemAllowed(itemIdx, member);
+  if(specialTag === 'creature' && member) return creatureItemAllowed(itemIdx, member);
   return itemAllowedForTag(itemIdx, specialTag);
 }
 // Their character object splits equipment by our category (it[1]) into two shapes: carry_slots
