@@ -3229,7 +3229,11 @@ function printCardImgHtml(name, cardMap, cls, cost){
 // Item/perk/mod cards sit in a fixed 8-per-row grid (see .p-items-grid) — each gets wrapped in a
 // same-size box so a landscape perk card and a portrait item card still occupy identical grid
 // cells; printCardImgHtml above stays as-is for the big unit portrait, which doesn't need that.
-function printCardBoxHtml(name, cardMap, cost, isPowerArmor){
+// boxCls/imgCls default to the squad print's own classes — Master's bigger print (see
+// buildPrintMasterHtml) passes its own pm-item-box/pm-item-img instead, same badge logic either way.
+function printCardBoxHtml(name, cardMap, cost, isPowerArmor, boxCls, imgCls){
+  boxCls = boxCls || 'p-item-box';
+  imgCls = imgCls || 'p-item-img';
   const val = cardMap[name];
   const files = val ? (Array.isArray(val) ? val : [val]) : [];
   // Power Armor cards have a blank slot baked into the art itself (banner row, right of the
@@ -3237,8 +3241,8 @@ function printCardBoxHtml(name, cardMap, cost, isPowerArmor){
   // card's corner sticker would otherwise land on top of the armor value already printed there.
   const badgeCls = 'p-cost-badge' + (isPowerArmor ? ' p-cost-badge-armor' : '');
   const badge = (cost===undefined || cost===null) ? '' : `<span class="${badgeCls}">${cost}</span>`;
-  if(!files.length) return `<div class="p-item-box p-noimg">${name}${badge}</div>`;
-  return files.map(f=>`<div class="p-item-box"><img class="p-item-img" src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="${name}">${badge}</div>`).join('');
+  if(!files.length) return `<div class="${boxCls} p-noimg">${name}${badge}</div>`;
+  return files.map(f=>`<div class="${boxCls}"><img class="${imgCls}" src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="${name}">${badge}</div>`).join('');
 }
 // The force's faction (for the faction rule card, both here and in the squad toolbar) is
 // whichever faction the first-added member's unit belongs to — mirrors wastelandworkshop, which
@@ -3467,6 +3471,25 @@ function openPrintRosterWindow(title, bodyHtml){
       .p-refpage{ page-break-before:always; display:flex; align-items:center; justify-content:center;
         gap:8mm; flex-wrap:wrap; height:190mm; }
       .p-refpage img{ max-width:31%; max-height:100%; object-fit:contain; }
+      /* ---- Master (GM) roster print: bigger cards than the squad's, 4 per page in a fixed 2x2
+         grid instead of squad's naturally-flowing stack — GM units rarely carry more than their
+         one fixed weapon + a mod or two, so there's plenty of spare width/height per unit to grow
+         into once the Battle Recording strip is gone. Explicit per-page grid (not "whatever
+         happens to fit") is what actually guarantees 4/page regardless of content. ---- */
+      .pm-page{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
+        gap:5mm; height:194mm; page-break-before:always; }
+      .pm-page:first-of-type{ page-break-before:auto; }
+      .pm-unit{ border:1px solid #ccc; border-radius:2px; padding:4px 6px; box-sizing:border-box;
+        display:flex; flex-direction:column; overflow:hidden; }
+      .pm-unit-name{ font-weight:bold; font-size:16px; margin-bottom:4px; flex:0 0 auto; }
+      .pm-unit-row{ display:flex; gap:10px; align-items:flex-start; flex:1 1 auto; min-height:0; }
+      .pm-unit-imgcol{ display:flex; flex-direction:column; gap:3px; flex:0 0 auto; height:100%; }
+      .pm-unit-img{ width:auto; height:auto; max-height:100%; max-width:210px; object-fit:contain; display:block; }
+      .pm-items-grid{ flex:1 1 auto; display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; min-width:0; height:100%; }
+      .pm-item-box{ position:relative; height:120px; width:auto; aspect-ratio:3/2; display:flex;
+        align-items:center; justify-content:center; overflow:hidden; }
+      .pm-item-img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
+      .pm-item-box.p-noimg{ border:1px dashed #999; font-size:11px; text-align:center; padding:3px; box-sizing:border-box; width:160px; }
       @media print{ .noprint{ display:none; } }
     </style></head><body>
     ${bodyHtml}
@@ -3499,11 +3522,11 @@ function buildPrintMasterHtml(){
     const hidePerks = !!memberModSlot || isDog;
     const innatePerks = unit && unit[3] ? unit[3] : [];
 
-    const unitImgHtml = printCardImgHtml(unitName, isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME, 'p-unit-img', unitBaseCost(m));
+    const unitImgHtml = printCardImgHtml(unitName, isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME, 'pm-unit-img', unitBaseCost(m));
     let autoHtml = '';
     if(isAutomatronHeadIdx(m.unitIdx)){
-      if(m.automatronTorso) autoHtml += printCardImgHtml(m.automatronTorso, AUTOMATRON_TORSO_CARD_BY_NAME, 'p-unit-img');
-      if(m.automatronLegs) autoHtml += printCardImgHtml(m.automatronLegs, AUTOMATRON_LEGS_CARD_BY_NAME, 'p-unit-img');
+      if(m.automatronTorso) autoHtml += printCardImgHtml(m.automatronTorso, AUTOMATRON_TORSO_CARD_BY_NAME, 'pm-unit-img');
+      if(m.automatronLegs) autoHtml += printCardImgHtml(m.automatronLegs, AUTOMATRON_LEGS_CARD_BY_NAME, 'pm-unit-img');
     }
 
     let cardsHtml = '';
@@ -3513,29 +3536,29 @@ function buildPrintMasterHtml(){
       let heroicCost = 0;
       if(memberModSlot && !(isAutoForHeroic && automatronClunkyBlocked(m))) heroicCost = -Math.ceil(unitBaseCost(m) * 0.2);
       else if(!memberModSlot) heroicCost = 48;
-      cardsHtml += printCardBoxHtml(heroicName, HEROIC_CARD_BY_NAME, heroicCost);
+      cardsHtml += printCardBoxHtml(heroicName, HEROIC_CARD_BY_NAME, heroicCost, false, 'pm-item-box', 'pm-item-img');
     }
     if(m.leader && !hidePerks && m.leaderPerk!==null && m.leaderPerk!==undefined && LEADER_PERKS_DB[m.leaderPerk]){
-      cardsHtml += printCardBoxHtml(LEADER_PERKS_DB[m.leaderPerk][0], LEADER_PERK_CARD_BY_NAME, LEADER_PERKS_DB[m.leaderPerk][1]);
+      cardsHtml += printCardBoxHtml(LEADER_PERKS_DB[m.leaderPerk][0], LEADER_PERK_CARD_BY_NAME, LEADER_PERKS_DB[m.leaderPerk][1], false, 'pm-item-box', 'pm-item-img');
     }
     if(!hidePerks){
       cardsHtml += innatePerks.map(pidx=>{
         const p = PERKS_DB[pidx];
-        return p ? printCardBoxHtml(p[0], PERK_CARD_BY_NAME, 0) : '';
+        return p ? printCardBoxHtml(p[0], PERK_CARD_BY_NAME, 0, false, 'pm-item-box', 'pm-item-img') : '';
       }).join('');
       cardsHtml += m.perks.map(pidx=>{
         const p = PERKS_DB[pidx];
-        return p ? printCardBoxHtml(p[0], PERK_CARD_BY_NAME, p[1]) : '';
+        return p ? printCardBoxHtml(p[0], PERK_CARD_BY_NAME, p[1], false, 'pm-item-box', 'pm-item-img') : '';
       }).join('');
     }
     cardsHtml += heldItems.map(inst=>{
       const it = ITEMS_DB[inst.itemIdx];
       if(!it) return '';
-      let html = printCardBoxHtml(it[2], ITEM_CARD_BY_NAME, it[3], it[1]==='Power Armor');
+      let html = printCardBoxHtml(it[2], ITEM_CARD_BY_NAME, it[3], it[1]==='Power Armor', 'pm-item-box', 'pm-item-img');
       if(inst.modInstId){
         const modInst = state.warehouse.items[inst.modInstId];
         const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
-        if(modIt) html += printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3], modIt[1]==='Power Armor');
+        if(modIt) html += printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3], modIt[1]==='Power Armor', 'pm-item-box', 'pm-item-img');
       }
       return html;
     }).join('');
@@ -3543,25 +3566,31 @@ function buildPrintMasterHtml(){
       cardsHtml += (m.mods||[]).map(modId=>{
         const modInst = state.warehouse.items[modId];
         const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
-        return modIt ? printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3]) : '';
+        return modIt ? printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3], false, 'pm-item-box', 'pm-item-img') : '';
       }).join('');
     }
 
-    return `<div class="p-unit">
-      <div class="p-unit-name">#${memberDisplayIndex(m.id)} ${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}</div>
-      <div class="p-unit-row">
-        <div class="p-unit-imgcol">${unitImgHtml}${autoHtml}</div>
-        <div class="p-items-grid">${cardsHtml || '<span class="p-hint">нет предметов/перков</span>'}</div>
+    return `<div class="pm-unit">
+      <div class="pm-unit-name">#${memberDisplayIndex(m.id)} ${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}</div>
+      <div class="pm-unit-row">
+        <div class="pm-unit-imgcol">${unitImgHtml}${autoHtml}</div>
+        <div class="pm-items-grid">${cardsHtml || '<span class="p-hint">нет предметов/перков</span>'}</div>
       </div>
     </div>`;
   });
+
+  // Fixed 2x2 grid per page (see .pm-page) rather than natural flow — chunk into groups of 4 so
+  // every page but the last is completely full, instead of "however many happen to fit".
+  const pages = [];
+  for(let i=0; i<unitCards.length; i+=4) pages.push(unitCards.slice(i, i+4));
+  const pagesHtml = pages.map(group => `<div class="pm-page">${group.join('')}</div>`).join('');
 
   const refFiles = squadForceReferenceFiles(members);
   const refPageHtml = refFiles.length
     ? `<div class="p-refpage">${refFiles.map(f=>`<img src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="Force Reference">`).join('')}</div>`
     : '';
 
-  return costHeaderHtml + unitCards.join('') + refPageHtml;
+  return costHeaderHtml + pagesHtml + refPageHtml;
 }
 function printMasterRoster(){
   openPrintRosterWindow('Master Roster — печать', buildPrintMasterHtml());
