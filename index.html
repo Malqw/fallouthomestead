@@ -195,12 +195,12 @@
      unevenly since their widths/heights are wildly different. A grid gives every item the same
      column width regardless of type, and the thumbnail is pulled out to its own top block (see
      itemChipHtml's thumbBlock) and enlarged instead of a small icon squeezed next to the name. ---- */
-  .wh-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; align-items:start; }
+  .wh-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:12px; align-items:start; }
   .wh-grid .tag, .wh-grid .armor-card{ display:flex; flex-direction:column; width:100%; margin:0; box-sizing:border-box; gap:4px; }
   .wh-grid .tag{ padding:8px; }
   .wh-card-thumb{ display:flex; justify-content:center; }
   .wh-grid .wh-thumb-wrap{ margin:0; }
-  .wh-grid .wh-thumb{ height:96px; max-width:100%; }
+  .wh-grid .wh-thumb{ height:140px; max-width:100%; }
   .wh-type-filter{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 12px; }
   .wh-type-btn{ display:flex; align-items:center; justify-content:center; width:34px; height:34px;
     padding:0; border-radius:5px; background:var(--panel); border:1px solid var(--panel-edge);
@@ -828,6 +828,7 @@ let pendingEdgeStart = null; // {r,c} vertex awaiting a second click to complete
 let zoomScale = 1, panX = 0, panY = 0; // stage view transform — pinch/drag on touch, wheel/drag on desktop
 let itemPickerFilterTypes = new Set(); // ITEMS_DB[i][1] values to narrow the Item Picker's list by — empty = show all types
 let itemPickerSearchText = '';
+let warehouseFilterTypes = new Set(); // same idea as itemPickerFilterTypes, but narrows the Warehouse's own stock grid
 const ZOOM_MIN = 0.4, ZOOM_MAX = 4;
 let edgeTool = 'fence';        // fence | barricade | ladder | erase — chosen BEFORE clicking, per improvement #1
 
@@ -3944,6 +3945,11 @@ function renderWarehouseView(){
   if(!wrap) return;
   const stock = itemsInWarehouse();
   const totalCaps = stock.reduce((s,inst)=> s + (ITEMS_DB[inst.itemIdx] ? ITEMS_DB[inst.itemIdx][3] : 0), 0);
+  const shown = stock.filter(inst=>{
+    if(warehouseFilterTypes.size===0) return true;
+    const it = ITEMS_DB[inst.itemIdx];
+    return it && warehouseFilterTypes.has(it[1]);
+  });
 
   let html = `
   <div class="squad-toolbar">
@@ -3957,8 +3963,9 @@ function renderWarehouseView(){
     бойца показывает только то, что лежит здесь или сейчас числится за другим бойцом). Удаление
     отсюда — насовсем (использован/продан), а не возврат бойцу.
   </div>
+  <div class="wh-type-filter" id="warehouseTypeFilter">${typeFilterHtml(warehouseFilterTypes, 'whfiltertype')}</div>
   <div class="wh-grid">
-    ${stock.length ? stock.map(inst=> itemChipHtml(inst, `data-delwarehouse="${inst.id}"`, false, true)).join('') : '<span class="hint">Склад пуст.</span>'}
+    ${shown.length ? shown.map(inst=> itemChipHtml(inst, `data-delwarehouse="${inst.id}"`, false, true)).join('') : `<span class="hint">${stock.length ? 'Ничего не найдено по выбранному фильтру.' : 'Склад пуст.'}</span>`}
   </div>`;
 
   wrap.innerHTML = html;
@@ -3972,18 +3979,33 @@ function attachWarehouseEvents(){
   wrap.querySelectorAll('[data-delwarehouse]').forEach(b=>{
     b.onclick = ()=>{ if(confirm('Убрать предмет со склада насовсем?')) deleteWarehouseItem(Number(b.dataset.delwarehouse)); };
   });
+  wrap.querySelectorAll('[data-whfiltertype]').forEach(b=>{
+    b.onclick = ()=>{
+      const t = b.dataset.whfiltertype;
+      if(t === '') warehouseFilterTypes.clear();
+      else if(warehouseFilterTypes.has(t)) warehouseFilterTypes.delete(t);
+      else warehouseFilterTypes.add(t);
+      renderWarehouseView();
+    };
+  });
   attachArmorControls(wrap);
   enhanceCombos(wrap);
 }
 
+/* ---- Shared multi-select type-icon filter row markup — used by both the Item Picker modal
+   (data-ipfiltertype, over itemPickerFilterTypes) and the Warehouse stock grid (data-whfiltertype,
+   over warehouseFilterTypes) so the two look and behave identically. ---- */
+function typeFilterHtml(activeTypes, dataAttr){
+  return `<button type="button" class="wh-type-btn ${activeTypes.size===0?'active':''}" data-${dataAttr}="" title="Сбросить фильтр">Все</button>
+    ${Object.entries(ITEM_TYPE_ICON).map(([type,icon])=>
+      `<button type="button" class="wh-type-btn ${activeTypes.has(type)?'active':''}" data-${dataAttr}="${type}" title="${type}"><img src="icons/${icon}" alt="${type}"></button>`
+    ).join('')}`;
+}
 /* ---- Item Picker modal: search + type-icon filter over a row list, click a row to add it
    straight to the Warehouse (see renderWarehouseView's "+ Добавить предмет" button). Stays open
    after each add so several items can be picked in a row; toast() confirms each add. ---- */
 function itemPickerTypeFilterHtml(){
-  return `<button type="button" class="wh-type-btn ${itemPickerFilterTypes.size===0?'active':''}" data-ipfiltertype="" title="Сбросить фильтр">Все</button>
-    ${Object.entries(ITEM_TYPE_ICON).map(([type,icon])=>
-      `<button type="button" class="wh-type-btn ${itemPickerFilterTypes.has(type)?'active':''}" data-ipfiltertype="${type}" title="${type}"><img src="icons/${icon}" alt="${type}"></button>`
-    ).join('')}`;
+  return typeFilterHtml(itemPickerFilterTypes, 'ipfiltertype');
 }
 // Grouped by ITEMS_DB[i][0] (the item's rarity/tier — Advanced/Hightech/Wasteland/etc, same
 // grouping the old <optgroup> dropdown used) so the list keeps that separation instead of one
