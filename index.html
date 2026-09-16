@@ -188,7 +188,7 @@
      which shows the thumbnail inline by request; clicking it still opens the same lightbox. ---- */
   .card-btn{ cursor:zoom-in; margin-left:1px; opacity:0.85; }
   .card-btn:hover{ opacity:1; }
-  .card-btn-icon{ width:1em; height:1em; vertical-align:-0.15em; object-fit:contain; }
+  .card-btn-icon{ width:16px; height:16px; vertical-align:-3px; object-fit:contain; }
   .wh-thumb-wrap{ display:inline-block; vertical-align:middle; margin-left:4px; }
   .wh-thumb{ display:block; height:48px; width:auto; max-width:80px; object-fit:contain; border-radius:3px; }
   /* ---- Warehouse stock grid: plain .tag items and the bigger .armor-card items (Power Armor,
@@ -244,7 +244,14 @@
   .ip-row:hover{ background:var(--panel-edge); }
   .ip-row-icon{ width:20px; height:20px; object-fit:contain; flex:0 0 auto; opacity:0.85; }
   .ip-row-name{ flex:1; }
-  .ip-row-preview{ flex:0 0 auto; }
+  /* Sized well past the icon itself (32px box around an 18px icon) so an imprecise tap still lands
+     on "preview" instead of falling through to the row's "add to warehouse" click. */
+  .ip-row-preview{
+    flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+    width:32px; height:32px; border-radius:5px;
+  }
+  .ip-row-preview:hover{ background:var(--green-dim); }
+  .ip-row-preview .card-btn-icon{ width:18px; height:18px; vertical-align:0; }
   .ip-empty{ padding:10px; opacity:0.7; }
   .ip-group-header{
     padding:8px 8px 4px; margin-top:6px; font-size:12px; text-transform:uppercase;
