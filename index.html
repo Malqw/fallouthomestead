@@ -3377,12 +3377,13 @@ function buildPrintSquadHtml(mode){
 
   return costHeaderHtml + unitsHtml + refPageHtml;
 }
-function printSquadRoster(mode){
-  const html = buildPrintSquadHtml(mode);
+// Shared by printSquadRoster() and printMasterRoster() — same card sizing/layout either way, just
+// a different title and pre-built body. See buildPrintSquadHtml()/buildPrintMasterHtml().
+function openPrintRosterWindow(title, bodyHtml){
   const win = window.open('', '_blank');
   if(!win){ toast('Браузер заблокировал всплывающее окно — разрешите его для печати', true); return; }
   win.document.write(`
-    <!DOCTYPE html><html><head><meta charset="utf-8"><title>Squad Roster — печать</title>
+    <!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
     <style>
       @page{ size:a4 landscape; margin:8mm; }
       body{ font-family:'Courier New', monospace; padding:0; color:#111; background:#fff; }
@@ -3444,13 +3445,102 @@ function printSquadRoster(mode){
       .p-refpage img{ max-width:31%; max-height:100%; object-fit:contain; }
       @media print{ .noprint{ display:none; } }
     </style></head><body>
-    ${html}
+    ${bodyHtml}
     <button class="noprint" onclick="window.print()" style="margin-top:16px;padding:8px 14px;">Печать</button>
     </body></html>
   `);
   win.document.close();
   win.focus();
   setTimeout(() => win.print(), 400);
+}
+function printSquadRoster(mode){
+  openPrintRosterWindow('Squad Roster — печать', buildPrintSquadHtml(mode));
+}
+// Master roster: same card layout as the squad print, minus the Battle Recording strip (no
+// Survival Mode tracking for GM's NPCs) and minus a forced "primary faction" card (a GM's roster
+// routinely mixes factions on purpose) — but still includes Force Reference cards for any
+// robot/creature/dog/etc tags present, same as squad's print.
+function buildPrintMasterHtml(){
+  const members = Object.values(state.master.members).sort((a,b)=>b.id-a.id);
+  if(!members.length) return '<p>Ростер мастера пуст.</p>';
+  const totalCaps = members.reduce((s,m)=>s+capsForMember(m), 0);
+  const costHeaderHtml = `<div class="p-cost-header">Ростер мастера: ${totalCaps} caps</div>`;
+
+  const unitCards = members.map(m=>{
+    const unit = (m.unitIdx!==null && m.unitIdx!==undefined) ? UNITS_DB[m.unitIdx] : null;
+    const unitName = unit ? unit[1] : '?';
+    const heldItems = itemsHeldBy(m.id).filter(inst=>!isModIdx(inst.itemIdx));
+    const memberModSlot = unitModTypeForIdx(m.unitIdx);
+    const isDog = isDogUnitIdx(m.unitIdx);
+    const hidePerks = !!memberModSlot || isDog;
+    const innatePerks = unit && unit[3] ? unit[3] : [];
+
+    const unitImgHtml = printCardImgHtml(unitName, isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME, 'p-unit-img', unitBaseCost(m));
+    let autoHtml = '';
+    if(isAutomatronHeadIdx(m.unitIdx)){
+      if(m.automatronTorso) autoHtml += printCardImgHtml(m.automatronTorso, AUTOMATRON_TORSO_CARD_BY_NAME, 'p-unit-img');
+      if(m.automatronLegs) autoHtml += printCardImgHtml(m.automatronLegs, AUTOMATRON_LEGS_CARD_BY_NAME, 'p-unit-img');
+    }
+
+    let cardsHtml = '';
+    if(m.heroic && !isDog){
+      const heroicName = memberModSlot==='Robot Mod' ? 'Clunky' : memberModSlot==='Creature Mod' ? 'Wild' : 'Heroic';
+      const isAutoForHeroic = isAutomatronHeadIdx(m.unitIdx);
+      let heroicCost = 0;
+      if(memberModSlot && !(isAutoForHeroic && automatronClunkyBlocked(m))) heroicCost = -Math.ceil(unitBaseCost(m) * 0.2);
+      else if(!memberModSlot) heroicCost = 48;
+      cardsHtml += printCardBoxHtml(heroicName, HEROIC_CARD_BY_NAME, heroicCost);
+    }
+    if(m.leader && !hidePerks && m.leaderPerk!==null && m.leaderPerk!==undefined && LEADER_PERKS_DB[m.leaderPerk]){
+      cardsHtml += printCardBoxHtml(LEADER_PERKS_DB[m.leaderPerk][0], LEADER_PERK_CARD_BY_NAME, LEADER_PERKS_DB[m.leaderPerk][1]);
+    }
+    if(!hidePerks){
+      cardsHtml += innatePerks.map(pidx=>{
+        const p = PERKS_DB[pidx];
+        return p ? printCardBoxHtml(p[0], PERK_CARD_BY_NAME, 0) : '';
+      }).join('');
+      cardsHtml += m.perks.map(pidx=>{
+        const p = PERKS_DB[pidx];
+        return p ? printCardBoxHtml(p[0], PERK_CARD_BY_NAME, p[1]) : '';
+      }).join('');
+    }
+    cardsHtml += heldItems.map(inst=>{
+      const it = ITEMS_DB[inst.itemIdx];
+      if(!it) return '';
+      let html = printCardBoxHtml(it[2], ITEM_CARD_BY_NAME, it[3], it[1]==='Power Armor');
+      if(inst.modInstId){
+        const modInst = state.warehouse.items[inst.modInstId];
+        const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
+        if(modIt) html += printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3], modIt[1]==='Power Armor');
+      }
+      return html;
+    }).join('');
+    if(memberModSlot){
+      cardsHtml += (m.mods||[]).map(modId=>{
+        const modInst = state.warehouse.items[modId];
+        const modIt = modInst ? ITEMS_DB[modInst.itemIdx] : null;
+        return modIt ? printCardBoxHtml(modIt[2], ITEM_CARD_BY_NAME, modIt[3]) : '';
+      }).join('');
+    }
+
+    return `<div class="p-unit">
+      <div class="p-unit-name">#${-m.id} ${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}</div>
+      <div class="p-unit-row">
+        <div class="p-unit-imgcol">${unitImgHtml}${autoHtml}</div>
+        <div class="p-items-grid">${cardsHtml || '<span class="p-hint">нет предметов/перков</span>'}</div>
+      </div>
+    </div>`;
+  });
+
+  const refFiles = squadForceReferenceFiles(members);
+  const refPageHtml = refFiles.length
+    ? `<div class="p-refpage">${refFiles.map(f=>`<img src="${new URL('cards-web/'+encodeURIComponent(f), location.href).href}" title="Force Reference">`).join('')}</div>`
+    : '';
+
+  return costHeaderHtml + unitCards.join('') + refPageHtml;
+}
+function printMasterRoster(){
+  openPrintRosterWindow('Master Roster — печать', buildPrintMasterHtml());
 }
 
 function printLayout(){
@@ -3485,7 +3575,7 @@ function printLayout(){
 function resetAll(){
   if(!confirm('Точно очистить весь Layout? Это действие необратимо. (Отряд/ростер/склад/ресурсы не затрагиваются.)')) return;
   state = {landLevel: state.landLevel, cells:{}, structures:{}, nextId:1, edges:{}, connectors:[], nextConnId:1,
-    squad: state.squad, warehouse: state.warehouse, resources: state.resources, editMode: state.editMode};
+    squad: state.squad, master: state.master, warehouse: state.warehouse, resources: state.resources, editMode: state.editMode};
   draft=null; draftMeta = { structIndex:'', name:'', size:4, doors:1, small:false, parent:'' };
   selectedStructureId=null; inspectSelectedId=null; connectorFirstCell=null; pendingEdgeStart=null;
   edgeTool='fence';
@@ -4562,6 +4652,7 @@ function renderMasterView(){
       <select class="combo-native combo-enhance" data-combo-mode="action" data-combo-placeholder="+ Добавить NPC — выбрать юнита…" id="addMasterUnitSelect">${unitOptionsHtml(null, state.master.faction)}</select>
     </div>
     <span class="squad-total">NPC: ${members.length} · Caps: ${totalCaps}</span>
+    <button id="btnPrintMaster" title="Печатная раскладка всего ростера мастера">🖨 Печать</button>
     <button class="danger" id="btnClearMaster">Очистить ростер мастера</button>
   </div>
   <div class="hint" style="margin-bottom:14px;">
@@ -4700,6 +4791,8 @@ function attachMasterEvents(){
     if(val === '') return;
     addMasterMemberWithUnit(Number(val));
   };
+  const btnPrintMaster = document.getElementById('btnPrintMaster');
+  if(btnPrintMaster) btnPrintMaster.onclick = printMasterRoster;
   const btnClearMaster = document.getElementById('btnClearMaster');
   if(btnClearMaster) btnClearMaster.onclick = ()=>{
     if(!confirm('Точно очистить весь ростер мастера? Это действие необратимо — предметы NPC не возвращаются на склад.')) return;
