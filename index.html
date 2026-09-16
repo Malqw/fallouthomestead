@@ -886,6 +886,16 @@ const FATE_OPTIONS = ['', '?', 'Delayed', 'Lost', 'Shaken', 'Captured', 'Injured
 function getMember(id){
   return (typeof id === 'number' && id < 0) ? state.master.members[id] : state.squad.members[id];
 }
+// The stored id is stable (needed so it never collides as an item's `holder`, see the negative-id
+// note on state.master) but is NOT what we show on screen or in print — that's this: 1-based
+// position among currently-existing members of the same roster, in creation order. Renumbers
+// itself automatically as members are added/removed, so deleting #2 and adding a new one shows it
+// as #2 again instead of jumping straight to whatever the internal counter is up to.
+function memberDisplayIndex(id){
+  const pool = (typeof id === 'number' && id < 0) ? state.master.members : state.squad.members;
+  const sorted = Object.values(pool).sort((a,b)=> Math.abs(a.id) - Math.abs(b.id));
+  return sorted.findIndex(m=>m.id===id) + 1;
+}
 // Unit is chosen at creation time and locked afterward — see HOMESTEAD_TOOL_CONTEXT.md; to swap
 // a unit, delete the member and add a new one (their Items/perks return to the Warehouse).
 function addSquadMemberWithUnit(unitIdx){
@@ -905,6 +915,7 @@ function addSquadMemberWithUnit(unitIdx){
   render();
 }
 function deleteSquadMember(id){
+  const displayId = memberDisplayIndex(id); // compute before removal — the position no longer exists after
   // items the model was carrying go back to the shared Warehouse pool instead of vanishing
   Object.values(state.warehouse.items).forEach(inst=>{
     if(inst.holder === id) inst.holder = 'warehouse';
@@ -912,7 +923,7 @@ function deleteSquadMember(id){
   delete state.squad.members[id];
   saveState();
   render();
-  toast(`Боец #${id} удалён из ростера.`);
+  toast(`Боец #${displayId} удалён из ростера.`);
 }
 /* ---- Master (GM) roster: same unit catalog/cost rules as the player squad, but no name field,
    none of Survival Mode's campaign tracking (Poisoned/Injured/Damage/Radiation/Addiction/Fate/
@@ -932,6 +943,7 @@ function addMasterMemberWithUnit(unitIdx){
   render();
 }
 function deleteMasterMember(id){
+  const displayId = memberDisplayIndex(id); // compute before removal — the position no longer exists after
   // nothing returns to the Warehouse for a Master NPC — its items/mods are deleted outright
   Object.values(state.warehouse.items).forEach(inst=>{
     if(inst.holder === id){
@@ -942,7 +954,7 @@ function deleteMasterMember(id){
   delete state.master.members[id];
   saveState();
   render();
-  toast(`NPC #${-id} удалён из ростера мастера.`);
+  toast(`NPC #${displayId} удалён из ростера мастера.`);
 }
 // rerender=false is used by typed (text/number) inputs so a keystroke doesn't rebuild the DOM
 // mid-edit and steal focus — see attachSquadEvents(). Selects/checkboxes always rerender since
@@ -1884,7 +1896,7 @@ function memberLabel(memberId){
   const m = getMember(memberId);
   if(!m) return `#${memberId}`;
   const unit = (m.unitIdx!==null && m.unitIdx!==undefined) ? UNITS_DB[m.unitIdx] : null;
-  return `#${m.id} ${m.name || (unit ? unit[1] : 'без имени')}`;
+  return `#${memberDisplayIndex(memberId)} ${m.name || (unit ? unit[1] : 'без имени')}`;
 }
 // Options for a member's "add item" select: every instance NOT already held by this member
 // (i.e. sitting in the Warehouse, or currently held by some other member) — GROUPED by current
@@ -3350,7 +3362,7 @@ function buildPrintSquadHtml(mode){
     </div>`;
 
     return `<div class="p-unit">
-      <div class="p-unit-name">#${m.id} ${m.name ? m.name+' — ' : ''}${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}${m.mission?' ⚑':''}</div>
+      <div class="p-unit-name">#${memberDisplayIndex(m.id)} ${m.name ? m.name+' — ' : ''}${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}${m.mission?' ⚑':''}</div>
       ${battleLogHtml}
       <div class="p-unit-row">
         <div class="p-unit-imgcol">${unitImgHtml}${autoHtml}</div>
@@ -3524,7 +3536,7 @@ function buildPrintMasterHtml(){
     }
 
     return `<div class="p-unit">
-      <div class="p-unit-name">#${-m.id} ${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}</div>
+      <div class="p-unit-name">#${memberDisplayIndex(m.id)} ${unitName} (${capsForMember(m)})${m.leader?' ★ Leader':''}</div>
       <div class="p-unit-row">
         <div class="p-unit-imgcol">${unitImgHtml}${autoHtml}</div>
         <div class="p-items-grid">${cardsHtml || '<span class="p-hint">нет предметов/перков</span>'}</div>
@@ -4364,7 +4376,7 @@ function renderSquadView(){
     html += `<div class="hint">Ростер пуст. Нажмите "+ Добавить бойца".</div>`;
   }
 
-  members.forEach(m=>{
+  members.forEach((m, memberIdx)=>{
     const unit = (m.unitIdx!==null && m.unitIdx!==undefined) ? UNITS_DB[m.unitIdx] : null;
     const caps = capsForMember(m);
     const otherCaps = caps - (unit ? unit[2] : 0);
@@ -4373,9 +4385,10 @@ function renderSquadView(){
     const isDog = isDogUnitIdx(m.unitIdx);
     const hidePerks = !!memberModSlot || isDog;
     const innatePerks = unit && unit[3] ? unit[3] : [];
+    const displayId = memberIdx + 1; // shown number — see memberDisplayIndex()'s comment
     html += `
     <fieldset class="squad-card">
-      <legend>#${m.id} ${m.name ? m.name : (unit ? unit[1] : '— без имени —')}${m.leader ? ' ★ Leader' : ''}${m.mission ? ' ⚑' : ''}</legend>
+      <legend>#${displayId} ${m.name ? m.name : (unit ? unit[1] : '— без имени —')}${m.leader ? ' ★ Leader' : ''}${m.mission ? ' ⚑' : ''}</legend>
 
       <label>Unit</label>
       <div class="hint" style="font-size:14px;color:var(--green);margin:2px 0 10px;" title="Юнит закреплён при добавлении бойца и не меняется — чтобы сменить, удалите бойца и добавьте заново">
@@ -4676,7 +4689,7 @@ function renderMasterView(){
     const isDog = isDogUnitIdx(m.unitIdx);
     const hidePerks = !!memberModSlot || isDog;
     const innatePerks = unit && unit[3] ? unit[3] : [];
-    const displayId = -m.id;
+    const displayId = memberDisplayIndex(m.id);
     html += `
     <fieldset class="squad-card">
       <legend>#${displayId} ${unit ? unit[1] : '— без юнита —'}${m.leader ? ' ★ Leader' : ''}</legend>
