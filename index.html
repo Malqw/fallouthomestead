@@ -190,6 +190,17 @@
   .card-btn:hover{ opacity:1; }
   .wh-thumb-wrap{ display:inline-block; vertical-align:middle; margin-left:4px; }
   .wh-thumb{ display:block; height:48px; width:auto; max-width:80px; object-fit:contain; border-radius:3px; }
+  /* ---- Warehouse stock grid: plain .tag items and the bigger .armor-card items (Power Armor,
+     Fusion Core, anything with a mod slot) used to sit in one flex-wrap row together, staggering
+     unevenly since their widths/heights are wildly different. A grid gives every item the same
+     column width regardless of type, and the thumbnail is pulled out to its own top block (see
+     itemChipHtml's thumbBlock) and enlarged instead of a small icon squeezed next to the name. ---- */
+  .wh-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; align-items:start; }
+  .wh-grid .tag, .wh-grid .armor-card{ display:flex; flex-direction:column; width:100%; margin:0; box-sizing:border-box; gap:4px; }
+  .wh-grid .tag{ padding:8px; }
+  .wh-card-thumb{ display:flex; justify-content:center; }
+  .wh-grid .wh-thumb-wrap{ margin:0; }
+  .wh-grid .wh-thumb{ height:96px; max-width:100%; }
   .wh-type-filter{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 12px; }
   .wh-type-btn{ display:flex; align-items:center; justify-content:center; width:34px; height:34px;
     padding:0; border-radius:5px; background:var(--panel); border:1px solid var(--panel-edge);
@@ -1928,13 +1939,19 @@ function itemChipHtml(inst, removeAttr, locked, showImage){
   const removeHtml = locked
     ? `<span class="small-note" title="Врождённый предмет юнита — нельзя убрать" style="color:var(--green-dim);">🔒</span>`
     : `<b ${removeAttr}>✕</b>`;
-  if(!it) return `<span class="tag">? ${removeHtml}</span>`;
+  if(!it) return `<div class="tag">? ${removeHtml}</div>`;
   const cardBtn = cardThumbOrBtnHtml(it[2], ITEM_CARD_BY_NAME, showImage);
+  // Warehouse cards (showImage) pull the thumbnail into its own block above the rest of the card
+  // instead of an inline icon next to the name, so every card — tag or armor-card — has the same
+  // top-image/bottom-text shape; squad view (showImage=false) keeps the old inline placement.
+  const thumbBlock = showImage ? `<div class="wh-card-thumb">${cardBtn}</div>` : '';
+  const inlineCardBtn = showImage ? '' : cardBtn;
   if(it[2] === 'Fusion Core'){
     const canAdd = canAddFusionCoreCharge();
     const addTitle = canAdd ? '' : ` title="${fusionCoreBlockedReason()}"`;
     return `<div class="armor-card">
-      <div class="armor-name" style="color:var(--green);">${it[2]} (${it[3]}) ${cardBtn}</div>
+      ${thumbBlock}
+      <div class="armor-name" style="color:var(--green);">${it[2]} (${it[3]}) ${inlineCardBtn}</div>
       <div class="armor-stats">Заряды: ${inst.charges}/${FUSION_CORE_MAX_CHARGES}</div>
       <div class="armor-actions">
         <button class="ghost" data-usecharge="${inst.id}" ${inst.charges<=0?'disabled':''}>−1 заряд</button>
@@ -1946,10 +1963,11 @@ function itemChipHtml(inst, removeAttr, locked, showImage){
   if(it[1] !== 'Power Armor'){
     const slot = modSlotForCategory(it[1]);
     if(!slot){
-      return `<span class="tag">${it[2]} (${it[3]}) ${cardBtn} ${removeHtml}</span>`;
+      return `<div class="tag">${thumbBlock}${it[2]} (${it[3]}) ${inlineCardBtn} ${removeHtml}</div>`;
     }
     return `<div class="armor-card">
-      <div class="armor-name" style="color:var(--green);">${it[2]} (${it[3]}) ${cardBtn}</div>
+      ${thumbBlock}
+      <div class="armor-name" style="color:var(--green);">${it[2]} (${it[3]}) ${inlineCardBtn}</div>
       <div class="armor-actions">
         ${modSlotHtml(inst)}
         ${removeHtml}
@@ -1971,10 +1989,11 @@ function itemChipHtml(inst, removeAttr, locked, showImage){
     actionBtn = '';
   }
   return `<div class="armor-card">
-    <div class="armor-name" style="color:${nameColor};">${it[2]} (${it[3]}) ${cardBtn}</div>
+    ${thumbBlock}
+    <div class="armor-name" style="color:${nameColor};">${it[2]} (${it[3]}) ${inlineCardBtn}</div>
     <div class="armor-stats">${inst.paCondition} · Выносливость ${inst.paDurability}/${max}</div>
     <div class="armor-actions">
-      
+
       ${actionBtn}
     ${state.editMode ? `
       <button class="ghost" data-adjustdur="${inst.id}" data-delta="-1" title="Записать потерю выносливости (бесплатно)">−1 Вын.</button>
@@ -3938,7 +3957,7 @@ function renderWarehouseView(){
     бойца показывает только то, что лежит здесь или сейчас числится за другим бойцом). Удаление
     отсюда — насовсем (использован/продан), а не возврат бойцу.
   </div>
-  <div class="tag-list">
+  <div class="wh-grid">
     ${stock.length ? stock.map(inst=> itemChipHtml(inst, `data-delwarehouse="${inst.id}"`, false, true)).join('') : '<span class="hint">Склад пуст.</span>'}
   </div>`;
 
