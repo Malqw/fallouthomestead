@@ -1494,6 +1494,28 @@ const ROBOT_WEAPON_FAMILY = {
   'Robobrain': { names: ['Robobrain Mesmetron','Robobrain Laser'], max: 1 },
   'Securitron mk2': { names: ['Weapon Securitron Gatling Laser','Weapon Securitron Missile Launcher','Securitron Grenade Launcher','Securitron SMG'], max: 2 },
 };
+// Every weapon-category Robot/Creature/Dog item that's ever granted as some unit's automatic
+// innate weapon (UNITS_DB[i][4]) — except the handful of family weapons above, which stay a real
+// player choice — has no business appearing in the Warehouse's general catalog (Item Picker):
+// it's hardwired to that one unit, never freely tradeable/stockable. Computed from the DB rather
+// than hardcoded so newly added creatures automatically stay covered.
+function computeInnateOnlyWeaponIdx(){
+  const familyNames = new Set(Object.values(ROBOT_WEAPON_FAMILY).flatMap(f=>f.names));
+  const weaponCats = new Set(['Rifle','Pistol','Melee','Heavy','Thrown']);
+  const idxSet = new Set();
+  UNITS_DB.forEach(u=>{
+    const innate = u[4];
+    if(!innate) return;
+    innate.forEach(([idx])=>{
+      const it = ITEMS_DB[idx];
+      if(it && ['Robot Items','Creature Items','Dog Items'].includes(it[0]) && weaponCats.has(it[1]) && !familyNames.has(it[2])){
+        idxSet.add(idx);
+      }
+    });
+  });
+  return idxSet;
+}
+const INNATE_ONLY_WEAPON_IDX = computeInnateOnlyWeaponIdx();
 const ROBOT_UNIVERSAL_ITEM_NAMES = new Set(['Bowler Hat','Triggerman Bowler','Robot Repair Kit']);
 const MR_HANDY_FAMILY_UNITS = new Set(['Mr Handy','Mr.Handy','Miss Nanny','Mr Gutsy','Mr.Gutsy']);
 const NON_ROBO_WEAPON_CATS = ['Rifle','Pistol','Melee','Heavy','Thrown'];
@@ -1842,7 +1864,7 @@ function memberItemPoolOptionsHtml(excludeMemberId){
   // Value is prefixed "new:" so the additem handler knows to mint a fresh instance instead of
   // reassigning an existing one — see createItemForMember().
   if(state.editMode){
-    const allowedNew = ITEMS_DB.map((it,i)=>({it,i})).filter(x=>x.it[1]!=='Mod' && !HIDDEN_ITEM_INDICES.has(x.i) && itemAllowedForMember(x.i, member, specialTag));
+    const allowedNew = ITEMS_DB.map((it,i)=>({it,i})).filter(x=>x.it[1]!=='Mod' && !HIDDEN_ITEM_INDICES.has(x.i) && !INNATE_ONLY_WEAPON_IDX.has(x.i) && itemAllowedForMember(x.i, member, specialTag));
     const catGroups = [...new Set(allowedNew.map(x=>x.it[0]))];
     for(const g of catGroups){
       const opts = allowedNew.filter(x=>x.it[0]===g)
@@ -4041,7 +4063,7 @@ function itemPickerListHtml(){
   let anyRows = false;
   const html = groups.map(g=>{
     const rows = ITEMS_DB.map((it,i)=>({it,i})).filter(x=>
-      x.it[0]===g && !HIDDEN_ITEM_INDICES.has(x.i) &&
+      x.it[0]===g && !HIDDEN_ITEM_INDICES.has(x.i) && !INNATE_ONLY_WEAPON_IDX.has(x.i) &&
       (itemPickerFilterTypes.size===0 || itemPickerFilterTypes.has(x.it[1])) &&
       (!q || x.it[2].toLowerCase().includes(q))
     );
@@ -4250,7 +4272,7 @@ function renderSquadView(){
 
       <label>Items</label>
       <div class="tag-list">
-        ${heldItems.length ? heldItems.map(inst=> itemChipHtml(inst, `data-removeitem="${inst.id}"`, inst.innate && !!memberSpecialTag(m.unitIdx) && !state.editMode)).join('') : '<span class="small-note">нет</span>'}
+        ${heldItems.length ? heldItems.map(inst=> itemChipHtml(inst, `data-removeitem="${inst.id}"`, inst.innate && !!memberSpecialTag(m.unitIdx))).join('') : '<span class="small-note">нет</span>'}
       </div>
       <div class="combo">
         <select class="combo-native combo-enhance" data-combo-mode="action" data-combo-placeholder="Добавить предмет…" data-additem="${m.id}">${memberItemPoolOptionsHtml(m.id)}</select>
