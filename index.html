@@ -188,6 +188,7 @@
      which shows the thumbnail inline by request; clicking it still opens the same lightbox. ---- */
   .card-btn{ cursor:zoom-in; margin-left:1px; opacity:0.85; }
   .card-btn:hover{ opacity:1; }
+  .card-btn-icon{ width:1em; height:1em; vertical-align:-0.15em; object-fit:contain; }
   .wh-thumb-wrap{ display:inline-block; vertical-align:middle; margin-left:4px; }
   .wh-thumb{ display:block; height:48px; width:auto; max-width:80px; object-fit:contain; border-radius:3px; }
   /* ---- Warehouse stock grid: plain .tag items and the bigger .armor-card items (Power Armor,
@@ -1913,7 +1914,8 @@ function adjustPowerArmorDurability(instId, delta){
 // with condition (name colour) + Endurance + repair/damage controls. `removeAttr` is the raw
 // attribute string for whichever "take this off" action applies in that context
 // (data-removeitem=".." to return to Warehouse, or data-delwarehouse=".." to delete for good).
-// Small "🃏" icon rendered next to a unit/item/perk name where physical card art exists (see the
+// Small preview icon (icons/awareness_white.png, from the game's own icon set) rendered next to a
+// unit/item/perk name where physical card art exists (see the
 // UNIT_CARD_BY_NAME/ITEM_CARD_BY_NAME/PERK_CARD_BY_NAME lookups near PERKS_DB) — clicking it opens
 // openCardLightbox() with that art. Returns '' when there's no matching card, so callers can just
 // splice this into a template without an extra existence check.
@@ -1922,7 +1924,7 @@ function cardBtnHtml(name, map){
   if(!val) return '';
   const files = Array.isArray(val) ? val : [val];
   const paths = files.map(f=>'cards-web/'+f).join('|');
-  return `<span class="card-btn" data-cards="${paths}" title="Показать карт${files.length>1?'ы':'у'}">🃏</span>`;
+  return `<span class="card-btn" data-cards="${paths}" title="Показать карт${files.length>1?'ы':'у'}"><img class="card-btn-icon" src="icons/awareness_white.png" alt="Просмотр"></span>`;
 }
 // Warehouse stock wants the actual card thumbnail inline instead of a 🃏 button — reuses the same
 // .card-btn/data-cards click-to-lightbox mechanism (so clicking the thumbnail still zooms), just
@@ -3955,13 +3957,6 @@ function renderWarehouseView(){
   <div class="squad-toolbar">
     <button type="button" id="btnOpenItemPicker">+ Добавить предмет</button>
     <span class="squad-total">На складе: ${stock.length} · Caps: ${totalCaps}</span>
-  </div>
-  <div class="hint" style="margin-bottom:14px;">
-    Общий пул предметов отряда. "+ Добавить предмет" открывает поиск по справочнику — выбор сразу
-    добавляет предмет на склад, окно можно оставить открытым и добавить несколько подряд. Отсюда
-    снаряжение становится доступно для выдачи бойцам во вкладке "Отряд" (там поле Items у каждого
-    бойца показывает только то, что лежит здесь или сейчас числится за другим бойцом). Удаление
-    отсюда — насовсем (использован/продан), а не возврат бойцу.
   </div>
   <div class="wh-type-filter" id="warehouseTypeFilter">${typeFilterHtml(warehouseFilterTypes, 'whfiltertype')}</div>
   <div class="wh-grid">
