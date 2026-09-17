@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>HOMESTEAD // Settlement Layout Terminal</title>
 <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="live-card/card.css">
 <style>
   :root{
     --bg:#05100a;
@@ -420,6 +421,9 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="live-card/engine.js"></script>
+<script src="live-card/bridge.js"></script>
+<script src="live-card/card-render.js"></script>
 <script>
 /* ============================= STATE ============================= */
 const GRID = 36;
@@ -2086,6 +2090,46 @@ function cardBtnHtml(name, map){
   const paths = files.map(f=>'cards-web/'+f).join('|');
   return `<span class="card-btn" data-cards="${paths}" title="Показать карт${files.length>1?'ы':'у'}"><img class="card-btn-icon" src="icons/awareness_white.png" alt="Просмотр"></span>`;
 }
+// Unit-card preview button that opens the LIVE card (recomputed from this member's actual
+// equipped items via FWWBridge/FWWEngine) instead of the static art, for any unit with an
+// official-data mapping. Falls back to the old static cardBtnHtml() for unmapped (homebrew-only)
+// units and for Automatron heads (their torso/legs assembly has no official-card equivalent).
+function liveCardBtnHtml(member, unitName){
+  const isAutomatron = isAutomatronHeadIdx(member.unitIdx);
+  const mapped = !isAutomatron && window.FWWBridge && FWWBridge.getOfficialUnit(unitName);
+  if(!mapped) return cardBtnHtml(unitName, isAutomatron ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME);
+  return `<span class="card-btn" data-live-member="${member.id}" title="Показать карточку"><img class="card-btn-icon" src="icons/awareness_white.png" alt="Просмотр"></span>`;
+}
+// Builds the equipped-items list FWWEngine needs for a member: our ITEMS_DB names resolved to
+// official equipment entries via FWWBridge, cloning in the Power Armor damaged/undamaged
+// condition per-instance (never mutating the shared FWWBridge-cached object).
+function liveEquippedItemsForMember(member){
+  return itemsHeldBy(member.id).map(inst=>{
+    const row = ITEMS_DB[inst.itemIdx];
+    const official = row && FWWBridge.getOfficialItem(row[2]);
+    if(!official) return null;
+    return inst.paCondition === 'Damaged' ? { ...official, _damaged: true } : official;
+  }).filter(Boolean);
+}
+// Print-page version of the live card: same buildCardHtml() output as the lightbox, scaled down
+// (via CSS transform, since the card's internals are absolutely positioned at a fixed 450x620
+// and a plain width/height wouldn't rescale them) to fit the print grid's fixed-width slot.
+// Returns null (so the caller falls back to printCardImgHtml's static art) when the unit has no
+// official-data mapping, or is an Automatron head, per the same rule as liveCardBtnHtml.
+const FWW_CARD_H = 620; // keep in sync with .fww-live-card's height in live-card/card.css
+function printLiveCardHtml(member, unitName, boxWidthPx){
+  const isAutomatron = isAutomatronHeadIdx(member.unitIdx);
+  const officialUnit = !isAutomatron && window.FWWBridge && FWWBridge.getOfficialUnit(unitName);
+  if(!officialUnit) return null;
+  const scale = boxWidthPx / 450;
+  // absolute URL, not the relative 'live-card/' the lightbox uses — this markup gets injected into
+  // a separate popup window (window.open('','_blank') + document.write, see openPrintRosterWindow)
+  // whose own base URI can't be relied on to resolve a relative path the same way index.html's can.
+  const html = FWWCardRender.buildCardHtml(officialUnit, liveEquippedItemsForMember(member), new URL('live-card/', location.href).href);
+  return `<div class="p-live-card-wrap" style="width:${boxWidthPx}px;height:${Math.round(FWW_CARD_H*scale)}px;overflow:hidden;">
+    <div style="width:450px;height:${FWW_CARD_H}px;transform:scale(${scale});transform-origin:top left;">${html}</div>
+  </div>`;
+}
 // Warehouse stock wants the actual card thumbnail inline instead of a 🃏 button — reuses the same
 // .card-btn/data-cards click-to-lightbox mechanism (so clicking the thumbnail still zooms), just
 // swaps the emoji for a small <img>. Falls back to the plain button when there's no art at all.
@@ -3296,7 +3340,7 @@ function buildPrintSquadHtml(mode){
     const hidePerks = !!memberModSlot || isDog;
     const innatePerks = unit && unit[3] ? unit[3] : [];
 
-    const unitImgHtml = printCardImgHtml(unitName, isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME, 'p-unit-img', unitBaseCost(m));
+    const unitImgHtml = printLiveCardHtml(m, unitName, 132) || printCardImgHtml(unitName, isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME, 'p-unit-img', unitBaseCost(m));
     let autoHtml = '';
     if(isAutomatronHeadIdx(m.unitIdx)){
       if(m.automatronTorso) autoHtml += printCardImgHtml(m.automatronTorso, AUTOMATRON_TORSO_CARD_BY_NAME, 'p-unit-img');
@@ -3412,6 +3456,7 @@ function openPrintRosterWindow(title, bodyHtml){
   if(!win){ toast('Браузер заблокировал всплывающее окно — разрешите его для печати', true); return; }
   win.document.write(`
     <!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
+    <link rel="stylesheet" href="${new URL('live-card/card.css', location.href).href}">
     <style>
       @page{ size:a4 landscape; margin:8mm; }
       body{ font-family:'Courier New', monospace; padding:0; color:#111; background:#fff; }
@@ -3559,7 +3604,7 @@ function buildPrintMasterHtml(){
     const hidePerks = !!memberModSlot || isDog;
     const innatePerks = unit && unit[3] ? unit[3] : [];
 
-    const unitImgHtml = printCardImgHtml(unitName, isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME, 'pm-unit-img', unitBaseCost(m));
+    const unitImgHtml = printLiveCardHtml(m, unitName, 180) || printCardImgHtml(unitName, isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME, 'pm-unit-img', unitBaseCost(m));
     let autoHtml = '';
     if(isAutomatronHeadIdx(m.unitIdx)){
       if(m.automatronTorso) autoHtml += printCardImgHtml(m.automatronTorso, AUTOMATRON_TORSO_CARD_BY_NAME, 'pm-unit-img');
@@ -4475,7 +4520,7 @@ function renderSquadView(){
 
       <label>Unit</label>
       <div class="hint" style="font-size:14px;color:var(--green);margin:2px 0 10px;" title="Юнит закреплён при добавлении бойца и не меняется — чтобы сменить, удалите бойца и добавьте заново">
-        ${unit ? `${unit[0]} — ${unit[1]} (${unit[2]}) ${cardBtnHtml(unit[1], isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME)}` : '— юнит не выбран —'}
+        ${unit ? `${unit[0]} — ${unit[1]} (${unit[2]}) ${liveCardBtnHtml(m, unit[1])}` : '— юнит не выбран —'}
       </div>
 
       ${isAutomatronHeadIdx(m.unitIdx) ? `
@@ -4779,7 +4824,7 @@ function renderMasterView(){
 
       <label>Unit</label>
       <div class="hint" style="font-size:14px;color:var(--green);margin:2px 0 10px;" title="Юнит закреплён при добавлении NPC и не меняется — чтобы сменить, удалите NPC и добавьте заново">
-        ${unit ? `${unit[0]} — ${unit[1]} (${unit[2]}) ${cardBtnHtml(unit[1], isAutomatronHeadIdx(m.unitIdx) ? AUTOMATRON_HEAD_CARD_BY_NAME : UNIT_CARD_BY_NAME)}` : '— юнит не выбран —'}
+        ${unit ? `${unit[0]} — ${unit[1]} (${unit[2]}) ${liveCardBtnHtml(m, unit[1])}` : '— юнит не выбран —'}
       </div>
 
       ${isAutomatronHeadIdx(m.unitIdx) ? `
@@ -5144,6 +5189,10 @@ function initMusicPlayer(){
 /* ============================= INIT ============================= */
 (async function init(){
   await loadState();
+  // Live unit-card data (official stat/mod tables + name mappings) — loaded once, in the
+  // background; liveCardBtnHtml() checks FWWBridge.getOfficialUnit() before ever using it, so a
+  // slow or failed fetch here just means every unit falls back to the static card art until it's ready.
+  if(window.FWWBridge) FWWBridge.loadData('live-card/data/').then(render).catch(err => console.warn('Live card data failed to load:', err));
   const viewSwitchMenu = document.getElementById('viewSwitchMenu');
   document.querySelectorAll('[data-view]').forEach(b=>{
     b.onclick = ()=>{ view = b.dataset.view; render(); viewSwitchMenu?.classList.remove('open'); };
@@ -5181,6 +5230,19 @@ function initMusicPlayer(){
   const cardLightboxImages = document.getElementById('cardLightboxImages');
   document.body.addEventListener('click', e=>{
     const btn = e.target.closest('.card-btn');
+    if(btn && cardLightbox && cardLightboxImages && btn.dataset.liveMember){
+      const member = getMember(Number(btn.dataset.liveMember));
+      const unit = member && member.unitIdx!=null ? UNITS_DB[member.unitIdx] : null;
+      const officialUnit = unit && window.FWWBridge && FWWBridge.getOfficialUnit(unit[1]);
+      if(member && officialUnit){
+        cardLightboxImages.innerHTML = FWWCardRender.buildCardHtml(officialUnit, liveEquippedItemsForMember(member), 'live-card/');
+        cardLightboxImages.classList.remove('multi');
+        cardLightbox.classList.add('open');
+      } else {
+        toast('Карточные данные ещё загружаются — попробуйте ещё раз через секунду.');
+      }
+      return;
+    }
     if(btn && cardLightbox && cardLightboxImages){
       const paths = btn.dataset.cards.split('|');
       cardLightboxImages.innerHTML = paths.map(p=>`<img src="${p}" alt="">`).join('');

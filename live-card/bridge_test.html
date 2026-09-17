@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Bridge + Engine test harness</title>
+<style>
+body{background:#1a1a1a;color:#ddd;font-family:monospace;padding:20px;font-size:13px}
+h2{color:#f7df46;border-bottom:1px solid #444;padding-bottom:4px;margin-top:32px}
+table{border-collapse:collapse;margin:8px 0 16px}
+td,th{border:1px solid #444;padding:3px 8px;text-align:left}
+.pass{color:#4caf50;font-weight:bold}
+.fail{color:#ff5252;font-weight:bold}
+.unmapped{color:#888;font-style:italic}
+.boosted{color:#4caf50}
+.lowered{color:#ff5252}
+pre{background:#111;padding:8px;overflow:auto}
+</style>
+</head>
+<body>
+<h1>Bridge + Engine — end-to-end test against real UNITS_DB/ITEMS_DB</h1>
+<div id="out">Loading…</div>
+
+<script src="engine.js"></script>
+<script src="bridge.js"></script>
+<script>
+const out = document.getElementById('out');
+function log(html) { out.innerHTML += html; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+async function loadOurDb() {
+  const html = await fetch('../index.html').then(r => r.text());
+  const unitsM = html.match(/const UNITS_DB = (\[.*?\]);\r?\n/s);
+  const itemsM = html.match(/const ITEMS_DB = (\[.*?\]);\r?\n/s);
+  return { UNITS_DB: JSON.parse(unitsM[1]), ITEMS_DB: JSON.parse(itemsM[1]) };
+}
+
+function assert(label, cond, detail) {
+  log(`<div class="${cond ? 'pass' : 'fail'}">[${cond ? 'PASS' : 'FAIL'}] ${esc(label)}${detail ? ' — ' + esc(detail) : ''}</div>`);
+}
+
+function renderDerivedTable(base, derived) {
+  let rows = '';
+  for (const k of FWWEngine.STAT_ORDER) {
+    const b = base.stats[k], d = derived.stats[k];
+    const cls = d > b ? 'boosted' : d < b ? 'lowered' : '';
+    rows += `<tr><td>${k}</td><td>${b}</td><td class="${cls}">${FWWEngine.statDisplay(d)}</td></tr>`;
+  }
+  let armourRows = '';
+  for (const k of ['physical', 'energy', 'radiation']) {
+    const b = base.armour[k], d = derived.armour[k];
+    const cls = d > b ? 'boosted' : d < b ? 'lowered' : '';
+    armourRows += `<tr><td>${k}</td><td>${FWWEngine.armourDisplay(b)}</td><td class="${cls}">${FWWEngine.armourDisplay(d)} / hard ${derived.armour[k+'_hard']}</td></tr>`;
+  }
+  let skillRows = '';
+  for (const [name, sk] of Object.entries(derived.skills)) {
+    if (!sk.stat && !sk.colour) continue;
+    const baseColour = base.skills[name] && base.skills[name].colour;
+    skillRows += `<tr><td>${esc(name)}</td><td>${sk.stat || '-'}</td><td>${sk.value == null ? '-' : sk.value}</td><td>${baseColour || '-'} ${baseColour && baseColour !== sk.colour ? '&rarr; <b>' + sk.colour + '</b>' : (sk.colour||'')}</td></tr>`;
+  }
+  return `
+    <table><tr><th>Stat</th><th>Base</th><th>Derived</th></tr>${rows}</table>
+    <table><tr><th>Armour</th><th>Base</th><th>Derived</th></tr>${armourRows}</table>
+    <table><tr><th>Skill</th><th>Stat</th><th>Value</th><th>Colour</th></tr>${skillRows}</table>`;
+}
+
+function runCase(title, ourUnitName, ourItemNames) {
+  log(`<h2>${esc(title)}</h2>`);
+  const unit = FWWBridge.getOfficialUnit(ourUnitName);
+  if (!unit) { log(`<div class="unmapped">"${esc(ourUnitName)}" has no official mapping — falls back to static card.</div>`); return null; }
+  log(`<div>Unit: <b>${esc(ourUnitName)}</b> &rarr; official <code>${unit.key}</code> (types: ${unit.types.join(',')})</div>`);
+
+  const items = ourItemNames.map(n => {
+    const it = FWWBridge.getOfficialItem(n);
+    log(`<div>Item: <b>${esc(n)}</b> &rarr; ${it ? '<code>' + it.key + '</code> (type: ' + it.type + ')' : '<span class="unmapped">no official mapping, skipped</span>'}</div>`);
+    return it;
+  }).filter(Boolean);
+
+  const base = FWWEngine.computeDerived(unit, []);
+  const derived = FWWEngine.computeDerived(unit, items);
+  log(renderDerivedTable(base, derived));
+  return { unit, items, base, derived };
+}
+
+(async function () {
+  out.innerHTML = '';
+  await FWWBridge.loadData('data/');
+  const { UNITS_DB, ITEMS_DB } = await loadOurDb();
+  log(`<div>Loaded ${UNITS_DB.length} units, ${ITEMS_DB.length} items from index.html.</div>`);
+
+  // coverage summary across the WHOLE real db, not just hand-picked names
+  let unitHits = 0, unitTotal = 0, seenU = new Set();
+  for (const row of UNITS_DB) {
+    if (seenU.has(row[1])) continue; seenU.add(row[1]); unitTotal++;
+    if (FWWBridge.getOfficialUnit(row[1])) unitHits++;
+  }
+  let itemHits = 0, itemTotal = 0, seenI = new Set();
+  for (const row of ITEMS_DB) {
+    if (seenI.has(row[2])) continue; seenI.add(row[2]); itemTotal++;
+    if (FWWBridge.getOfficialItem(row[2])) itemHits++;
+  }
+  log(`<h2>Coverage (live, against the mapping files as loaded)</h2>`);
+  log(`<div>Units: ${unitHits}/${unitTotal} mapped</div>`);
+  log(`<div>Items: ${itemHits}/${itemTotal} mapped</div>`);
+
+  // ---- Case 1: sanity check against the already-known-good Codsworth combo ----
+  const r1 = runCase('Case 1: Codsworth + Bowler Hat + Gecko-Backed Metal Armor (regression check)',
+    'Codsworth', ['Bowler Hat', 'Gecko-Backed Metal Armor']);
+  if (r1) {
+    assert('END 6 -> 7 (Bowler Hat, Robot-gated)', r1.derived.stats.E === 7);
+    assert('AGI 6 -> 5 (Gecko-Backed Metal Armor)', r1.derived.stats.A === 5);
+    assert('armour replaced to 2/1/4', r1.derived.armour.physical === 2 && r1.derived.armour.energy === 1 && r1.derived.armour.radiation === 4);
+    assert('Health tracks END (7)', r1.derived.skills['Health'].value === 7);
+  }
+
+  // ---- Case 2: skill-colour shift (never exercised before) ----
+  const r2 = runCase('Case 2: Codsworth + Tricorn Hat (skill-colour shift, not just numbers)',
+    'Codsworth', ['Tricorn Hat']);
+  if (r2) {
+    assert('CHA 5 -> 6', r2.derived.stats.C === 6);
+    assert('Presence colour Red -> Green (ladder shift, not a number)', r2.derived.skills['Presence'].colour === 'Green',
+      `got ${r2.derived.skills['Presence'].colour}`);
+  }
+
+  // ---- Case 3: Power Armor vs normal armour-replace comparison (never exercised before) ----
+  const r3 = runCase('Case 3: Codsworth + T-60 Power Armor + Gecko-Backed Metal Armor (PA-vs-normal tie-break)',
+    'Codsworth', ['T-60 Power Armor', 'Gecko-Backed Metal Armor']);
+  if (r3) {
+    // T-60's replace (13 total incl. hard) beats Gecko-Backed's (7 total) -> T-60's values should win
+    const paMod = r3.items.find(i => i.key === 'T-60_POWER_ARMOR').mod.find(m => m.armour && m.armour.replace && m.armour.replace.physical_hard);
+    assert('bigger-sum replace (T-60) wins over Gecko-Backed', r3.derived.armour.physical === paMod.armour.replace.physical,
+      `physical=${r3.derived.armour.physical}, expected ${paMod.armour.replace.physical}`);
+  }
+
+  // ---- Case 4: requirements.type gating blocks a Robot-only item on a non-Robot unit ----
+  log(`<h2>Case 4: requirements.type gating on a real non-Robot unit</h2>`);
+  const dogmeat = FWWBridge.getOfficialUnit('Dogmeat');
+  if (dogmeat) {
+    const withHat = FWWEngine.computeDerived(dogmeat, FWWBridge.getOfficialEquippedItems(['Bowler Hat']));
+    const withoutHat = FWWEngine.computeDerived(dogmeat, []);
+    assert('Bowler Hat (Robot-only) has no effect on Dogmeat', withHat.stats.E === withoutHat.stats.E,
+      `with=${withHat.stats.E}, without=${withoutHat.stats.E}`);
+  } else {
+    log('<div class="unmapped">Dogmeat not mapped — skipped</div>');
+  }
+})();
+</script>
+</body>
+</html>

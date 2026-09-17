@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Live Card Prototype</title>
+<link rel="stylesheet" href="card.css">
+<style>
+body { background:#333; padding:40px; font-family:sans-serif; display:flex; gap:30px; flex-wrap:wrap; }
+.caption { color:#ccc; font-family:sans-serif; font-size:14px; margin-bottom:8px; max-width:450px; }
+.col { display:flex; flex-direction:column; }
+</style>
+</head>
+<body>
+
+<div class="col">
+  <div class="caption">Codsworth — база (без экипировки)</div>
+  <div id="card1"></div>
+</div>
+
+<div class="col">
+  <div class="caption">Codsworth + BOWLER HAT (END +1) + GECKO-BACKED METAL ARMOR (AGI -1, броня заменена) — живой пересчёт характеристик от предметов</div>
+  <div id="card2"></div>
+</div>
+
+<script src="engine.js"></script>
+<script src="card-render.js"></script>
+<script>
+// ---- verbatim fww_unit_templates.json entry (key: SURV-CODSWORTH) ----
+const CODSWORTH_TEMPLATE = {
+  "name": { "en": "CODSWORTH" },
+  "factions": [],
+  "types": ["ROBOT"],
+  "unique": true,
+  "image": "codsworth.png",
+  "skills": {
+    "Battle Cry": { "stat": "", "colour": "" },
+    "Battle Cry resist": { "stat": "", "colour": "" },
+    "Computers": { "stat": "I" },
+    "Health": { "stat": "E" },
+    "Heavy Weapon": { "stat": "", "colour": "" },
+    "Lockpick": { "stat": "", "colour": "" },
+    "Melee": { "stat": "A" },
+    "Pistol": { "stat": "A" },
+    "Presence": { "stat": "C", "colour": "Red" },
+    "Rifle": { "stat": "", "colour": "" },
+    "Search": { "stat": "P" },
+    "Thrown": { "stat": "A", "colour": "Green" }
+  },
+  "stats": { "S": 4, "P": 8, "E": 6, "C": 5, "I": 7, "A": 6, "L": 2 },
+  "armour": { "physical": 3, "physical_hard": 0, "energy": 2, "energy_hard": 0, "radiation": -1, "radiation_hard": 0 },
+  "move": { "main": "Move Red", "charge": "Charge Green" },
+  "awarenessIcon": "awareness_black",
+  "specialIcons": ["climb_not", "difficult_terrain_not", "battle_cry_not"],
+  "specialRules": [
+    "EQUIPPED: Mr. Handy Buzzsaw and Mr. Handy Flamer.",
+    "PURIFIED WATER: When activated, add [[counting_token|Counting Token]] to this card if none present.  A friendly, non-robot model may use this [[counting_token|Counting Token]] via sharing to remove 1 [[damage|Damage]]."
+  ]
+};
+
+// ---- verbatim fww_equipment.json entries (mod arrays exactly as shipped) ----
+const BOWLER_HAT = {
+  "name": "BOWLER HAT",
+  "type": "Clothing",
+  "mod": [{ "type": "permanent", "stats": { "E": 1 }, "armour": {}, "requirements": { "type": ["Robot"] }, "notAllowedBy": {}, "skills": {} }]
+};
+const GECKO_BACKED_METAL_ARMOR = {
+  "name": "GECKO-BACKED METAL ARMOR",
+  "type": "Armor",
+  "mod": [{ "type": "permanent", "stats": { "A": -1 }, "armour": { "replace": { "physical": 2, "energy": 1, "radiation": 4 } } }]
+};
+
+document.getElementById('card1').innerHTML = FWWCardRender.buildCardHtml(CODSWORTH_TEMPLATE, []);
+document.getElementById('card2').innerHTML = FWWCardRender.buildCardHtml(CODSWORTH_TEMPLATE, [BOWLER_HAT, GECKO_BACKED_METAL_ARMOR]);
+
+// ---- long-name stress test (verbatim fww_unit_templates.json entries) ----
+fetch('data/long_name_test.json').then(r => r.json()).then(cases => {
+  const host = document.querySelector('body');
+  for (const [label, tpl] of Object.entries(cases)) {
+    const col = document.createElement('div');
+    col.className = 'col';
+    col.innerHTML = `<div class="caption">${label}</div><div class="card-slot"></div>`;
+    col.querySelector('.card-slot').innerHTML = FWWCardRender.buildCardHtml(tpl, []);
+    host.appendChild(col);
+  }
+});
+</script>
+
+</body>
+</html>

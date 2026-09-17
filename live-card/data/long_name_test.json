@@ -1,0 +1,1275 @@
+{
+  "Mothman Hatchling (Vengeful) — 26 chars, 2 type icons, no faction text": {
+    "key": "MOTH-HATCHLING_VENGEFUL",
+    "name": {
+      "en": "MOTHMAN HATCHLING VENGEFUL"
+    },
+    "factions": [
+      "MOTH"
+    ],
+    "availableFactions": [
+      "MOTH"
+    ],
+    "types": [
+      "CRYPTID",
+      "MOTHMAN"
+    ],
+    "unique": null,
+    "image": "mothman_hatchling_vengeful.png",
+    "skills": {
+      "Battle Cry": {
+        "id": null,
+        "stat": null,
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Battle Cry resist": {
+        "id": null,
+        "stat": "C",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Computers": {
+        "id": null,
+        "stat": null,
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Health": {
+        "id": null,
+        "stat": "E",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Heavy Weapon": {
+        "id": null,
+        "stat": null,
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Lockpick": {
+        "id": null,
+        "stat": null,
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Melee": {
+        "id": null,
+        "stat": "A",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Pistol": {
+        "id": null,
+        "stat": null,
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Presence": {
+        "id": null,
+        "stat": "C",
+        "colour": "YELLOW",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Rifle": {
+        "id": null,
+        "stat": "P",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Search": {
+        "id": null,
+        "stat": null,
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Thrown": {
+        "id": null,
+        "stat": null,
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      }
+    },
+    "stats": {
+      "S": 4,
+      "P": 6,
+      "E": 7,
+      "C": 4,
+      "I": 2,
+      "A": 5,
+      "L": 2
+    },
+    "armour": {
+      "physical": 2,
+      "physical_hard": null,
+      "energy": 2,
+      "energy_hard": null,
+      "radiation": -1,
+      "radiation_hard": null
+    },
+    "move": {
+      "main": "Move Red",
+      "charge": "Charge Red"
+    },
+    "awarenessIcon": "awareness_blue",
+    "specialIcons": [
+      "difficult_terrain_not",
+      "action_point_use_reaction",
+      "melee"
+    ],
+    "specialRules": [
+      "FLYING: Treats Climbable Terrain as Normal Terrain.",
+      "EVASIVE: -2 to hit at Long Range.",
+      "VENGEFUL: When using [[rifle|Rifle]] in Close Combat, ignore penalty for ranged weapon.",
+      "SWOOP AWAY: May break engagement without causing free attack.",
+      "EQUIPPED: Hatchling Sonic Screech, Hatchling Sonic Wave."
+    ],
+    "baseCost": 100,
+    "packs": [
+      "wave_10"
+    ],
+    "referenceCards": [
+      "cult_of_the_mothman",
+      "cryptids"
+    ]
+  },
+  "Survivalist (The Operators) — 27 chars, faction text, no type icon": {
+    "key": "OPERATOR-SURVIVALIST",
+    "name": {
+      "en": "SURVIVALIST (THE OPERATORS)"
+    },
+    "factions": [
+      "RAID",
+      "OPERATORS"
+    ],
+    "availableFactions": [
+      "RAID",
+      "OPERATORS"
+    ],
+    "types": [],
+    "unique": false,
+    "image": "operator-survivalist.png",
+    "skills": {
+      "Battle Cry": {
+        "id": null,
+        "stat": "",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Battle Cry resist": {
+        "id": null,
+        "stat": "C",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Computers": {
+        "id": null,
+        "stat": "L",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Health": {
+        "id": null,
+        "stat": "E",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Heavy Weapon": {
+        "id": null,
+        "stat": "S",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Lockpick": {
+        "id": null,
+        "stat": null,
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Melee": {
+        "id": null,
+        "stat": "A",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Pistol": {
+        "id": null,
+        "stat": "P",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Presence": {
+        "id": null,
+        "stat": "C",
+        "colour": "GREEN",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Rifle": {
+        "id": null,
+        "stat": "P",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Search": {
+        "id": null,
+        "stat": "I",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Thrown": {
+        "id": null,
+        "stat": "S",
+        "colour": "GREEN",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      }
+    },
+    "stats": {
+      "S": 4,
+      "P": 5,
+      "E": 5,
+      "C": 4,
+      "I": 5,
+      "A": 4,
+      "L": 3
+    },
+    "armour": {
+      "physical": 0,
+      "energy": 0,
+      "radiation": 0
+    },
+    "move": {
+      "main": "Move Yellow",
+      "charge": "Charge Red"
+    },
+    "awarenessIcon": "awareness_green",
+    "specialIcons": [
+      "action_point_use_reaction",
+      "action_point_use_rifle"
+    ],
+    "specialRules": [],
+    "baseCost": 48,
+    "packs": [
+      "wave_9"
+    ],
+    "referenceCards": [
+      "faction_raiders",
+      "ai_raider",
+      "THE_OPERATORS"
+    ]
+  },
+  "Feral Ghoul Special Operator — 28 chars, 1 type icon, no faction text": {
+    "key": "CREATURES-FERAL_GHOUL_SO",
+    "name": {
+      "en": "FERAL GHOUL SPECIAL OPERATOR"
+    },
+    "factions": [],
+    "availableFactions": [
+      "CREATURES"
+    ],
+    "types": [
+      "CREATURE"
+    ],
+    "unique": null,
+    "image": "feral_special_operator.png",
+    "skills": {
+      "Battle Cry": {
+        "id": null,
+        "stat": "",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Battle Cry resist": {
+        "id": null,
+        "stat": "",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Computers": {
+        "id": null,
+        "stat": "",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Health": {
+        "id": null,
+        "stat": "E",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Heavy Weapon": {
+        "id": null,
+        "stat": "",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Lockpick": {
+        "id": null,
+        "stat": "",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Melee": {
+        "id": null,
+        "stat": "S",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Pistol": {
+        "id": null,
+        "stat": "",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Presence": {
+        "id": null,
+        "stat": "C",
+        "colour": "RED",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Rifle": {
+        "id": null,
+        "stat": "",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Search": {
+        "id": null,
+        "stat": "P",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Thrown": {
+        "id": null,
+        "stat": "",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      }
+    },
+    "stats": {
+      "S": 6,
+      "P": 2,
+      "E": 4,
+      "C": 1,
+      "I": 2,
+      "A": 4,
+      "L": 1
+    },
+    "armour": {
+      "physical": 1,
+      "physical_hard": 0,
+      "energy": 2,
+      "energy_hard": 0,
+      "radiation": -1,
+      "radiation_hard": 0
+    },
+    "move": {
+      "main": "Move Yellow",
+      "charge": "Charge Red"
+    },
+    "awarenessIcon": "awareness_green",
+    "specialIcons": [
+      "battle_cry_not"
+    ],
+    "specialRules": [
+      "RADIATION HEALING: Each point of [[radiation_damage|Rad Damage]] removes 1 [[damage|Damage]].",
+      "SCREECHING RADIO STATIC [[aura|Aura]]:  When activated, one enemy model gets [[minus_2_token|Minus 2 Token]].",
+      "EQUIPPED: Feral Ghoul Swipe."
+    ],
+    "baseCost": 62,
+    "packs": [
+      "wave_10"
+    ],
+    "referenceCards": [
+      "faction_creature",
+      "type_creature"
+    ]
+  },
+  "Vault Dweller, Sneaky Survivor — 30 chars, no icon, no faction text": {
+    "key": "SURV-VAULT_DWELLER_SNEAKY-SURVIVOR",
+    "name": {
+      "en": "VAULT DWELLER, SNEAKY SURVIVOR"
+    },
+    "factions": [],
+    "availableFactions": [
+      "SURV"
+    ],
+    "types": [],
+    "unique": true,
+    "image": "vault_dweller_sneaky.png",
+    "skills": {
+      "Battle Cry": {
+        "id": null,
+        "stat": "",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Battle Cry resist": {
+        "id": null,
+        "stat": "C",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Computers": {
+        "id": null,
+        "stat": "I",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Health": {
+        "id": null,
+        "stat": "A",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Heavy Weapon": {
+        "id": null,
+        "stat": "S",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Lockpick": {
+        "id": null,
+        "stat": "A",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Melee": {
+        "id": null,
+        "stat": "S",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Pistol": {
+        "id": null,
+        "stat": "P",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Presence": {
+        "id": null,
+        "stat": "C",
+        "colour": "BLUE",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Rifle": {
+        "id": null,
+        "stat": "P",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Search": {
+        "id": null,
+        "stat": "I",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Thrown": {
+        "id": null,
+        "stat": "A",
+        "colour": "GREEN",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      }
+    },
+    "stats": {
+      "S": 6,
+      "P": 8,
+      "E": 5,
+      "C": 5,
+      "I": 7,
+      "A": 9,
+      "L": 5
+    },
+    "armour": {
+      "physical": 0,
+      "physical_hard": null,
+      "energy": 0,
+      "energy_hard": null,
+      "radiation": 0,
+      "radiation_hard": null
+    },
+    "move": {
+      "main": "Move Yellow",
+      "charge": "Charge Red"
+    },
+    "awarenessIcon": "awareness_black",
+    "specialIcons": [
+      "action_point_use_reaction",
+      "action_point_use_move"
+    ],
+    "specialRules": [
+      "GHOST: When this model is targeted by a Shoot Action, it gets [[action_point|Action Point]].",
+      "WHISPER IN THE WIND: -2 to hit with a Shoot Action."
+    ],
+    "baseCost": 194,
+    "packs": [
+      "wave_10"
+    ],
+    "referenceCards": []
+  },
+  "Alien Invader, Supreme Commander — 32 chars, faction text, no type icon": {
+    "key": "ALIEN_INVADER_SUPREME_COMMANDER",
+    "name": {
+      "en": "ALIEN INVADER, SUPREME COMMANDER"
+    },
+    "factions": [
+      "ZETAN"
+    ],
+    "availableFactions": [
+      "ZETAN"
+    ],
+    "types": [
+      "zetan"
+    ],
+    "unique": false,
+    "image": "alien_invader_sc.png",
+    "skills": {
+      "Battle Cry": {
+        "id": null,
+        "stat": "",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Battle Cry resist": {
+        "id": null,
+        "stat": null,
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Computers": {
+        "id": null,
+        "stat": "I",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Health": {
+        "id": null,
+        "stat": "E",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Heavy Weapon": {
+        "id": null,
+        "stat": null,
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Lockpick": {
+        "id": null,
+        "stat": "I",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Melee": {
+        "id": null,
+        "stat": "S",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Pistol": {
+        "id": null,
+        "stat": "P",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Presence": {
+        "id": null,
+        "stat": "C",
+        "colour": "BLUE",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Rifle": {
+        "id": null,
+        "stat": "P",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Search": {
+        "id": null,
+        "stat": "P",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Thrown": {
+        "id": null,
+        "stat": "A",
+        "colour": "GREEN",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      }
+    },
+    "stats": {
+      "S": 4,
+      "P": 8,
+      "E": 5,
+      "C": 6,
+      "I": 9,
+      "A": 6,
+      "L": 5
+    },
+    "armour": {
+      "physical": 0,
+      "physical_hard": null,
+      "energy": 0,
+      "energy_hard": null,
+      "radiation": -1,
+      "radiation_hard": null
+    },
+    "move": {
+      "main": "Move Red",
+      "charge": "Charge Green"
+    },
+    "awarenessIcon": "awareness_black",
+    "specialIcons": [
+      "battle_cry_not",
+      "action_point_use_reaction",
+      "action_point_use_expertise"
+    ],
+    "specialRules": [
+      "HIGH PITCHED SCREECHING[[aura|Aura]]: Other Zetan models gain [[action_point_use_move|Use Action Point Move]].",
+      "MORE INSISTENT SCREECHING[[aura|Aura]]: Other Zetan models get +1 [[health|Health]].",
+      "EQUIPPED: Alien Disintegrator, Shock Baton, Zetan Power Suit."
+    ],
+    "baseCost": 200,
+    "packs": [
+      "wave_10"
+    ],
+    "referenceCards": [
+      "faction_zetan"
+    ]
+  },
+  "The Flatwoods Monster — 678 chars of specialRules, hits the 0.6 shrink floor": {
+    "key": "THE_FLATWOODS_MONSTER",
+    "name": {
+      "en": "THE FLATWOODS MONSTER"
+    },
+    "factions": [
+      "ZETAN"
+    ],
+    "availableFactions": [
+      "ZETAN"
+    ],
+    "types": [
+      "zetan",
+      "cryptid"
+    ],
+    "unique": false,
+    "image": "flatwoods_monster.png",
+    "skills": {
+      "Battle Cry": {
+        "id": null,
+        "stat": "",
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Battle Cry resist": {
+        "id": null,
+        "stat": "C",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Computers": {
+        "id": null,
+        "stat": "I",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Health": {
+        "id": null,
+        "stat": "E",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Heavy Weapon": {
+        "id": null,
+        "stat": null,
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Lockpick": {
+        "id": null,
+        "stat": "L",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Melee": {
+        "id": null,
+        "stat": "S",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Pistol": {
+        "id": null,
+        "stat": "P",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Presence": {
+        "id": null,
+        "stat": "C",
+        "colour": "BLUE",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Rifle": {
+        "id": null,
+        "stat": null,
+        "colour": "",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Search": {
+        "id": null,
+        "stat": "P",
+        "colour": null,
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      },
+      "Thrown": {
+        "id": null,
+        "stat": "A",
+        "colour": "GREEN",
+        "mod": null,
+        "expertise": {
+          "black": null,
+          "yellow": null,
+          "green": null
+        },
+        "rpgSkill": null,
+        "coreSkill": null
+      }
+    },
+    "stats": {
+      "S": 8,
+      "P": 8,
+      "E": 7,
+      "C": 5,
+      "I": 7,
+      "A": 5,
+      "L": 5
+    },
+    "armour": {
+      "physical": 0,
+      "physical_hard": null,
+      "energy": 0,
+      "energy_hard": null,
+      "radiation": -1,
+      "radiation_hard": null
+    },
+    "move": {
+      "main": "Move Red",
+      "charge": "Charge Black"
+    },
+    "awarenessIcon": "awareness_black",
+    "specialIcons": [
+      "stun_not",
+      "action_point_use_reaction",
+      "action_point_use_expertise"
+    ],
+    "specialRules": [
+      "FLYING: Treats Climable Terrain as Normal Terrain.",
+      "SPORADIC TELEPORT: When this model Moves, do not move it normally. Instead pick it up and place it directly at the destination. It does not Move through the intervening space or trigger free Quick Action attacks when it leaves Engagement.",
+      "MIND CONTROL: [[type_creature_black|Type: Creature]] and [[type_robot_black|Type: Robot]] treat this model as if it was friendly and cannot intentionally attack it unless The Flatwoods Monster is within Orange or has attacked a friendly [[type_creature_black|Type: Creature]] or [[type_robot_black|Type: Robot]] before in this game.",
+      "EQUIPPED: Alien Swipe, Alien Laser, Zetan Inquisitor Suit."
+    ],
+    "baseCost": 183,
+    "packs": [
+      "wave_10"
+    ],
+    "referenceCards": [
+      "faction_zetan"
+    ]
+  }
+}

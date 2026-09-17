@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" 
+    width="200" 
+    height="200" 
+    viewBox="0 0 200 200">
+<polygon 
+    points="20 20, 180 20, 180 180, 20 180"
+    style="fill:#00a0e3;stroke:#222;stroke-width:10" /></svg>

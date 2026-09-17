@@ -1,0 +1,133 @@
+/* Live unit card — scoped under .fww-live-card so none of these (deliberately generic,
+   lifted verbatim from the compiled app's own class names) selectors leak into or collide
+   with the host page's own CSS (e.g. index.html already has its own unrelated `.wrap`). */
+
+@font-face { font-family: 'HandelsonTwo'; src: url('fonts/HandelsonTwo.otf'); }
+@font-face { font-family: 'BarlowCondensed'; src: url('fonts/BarlowCondensed-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: 'BarlowCondensed'; src: url('fonts/BarlowCondensed-Medium.ttf'); font-weight: 500; }
+
+/* base font-size:15px is the root all em-sizes on the card are computed from — confirmed via
+   getComputedStyle in the live app (.dynamicCard{font-size:15px}). */
+/* Height deliberately shortened from the source's 685px: most units' actual content (stats +
+   armour + specialRules + specialIcons) bottoms out around 555-590px, leaving ~95-130px of dead
+   cream space below everything — measured across a sample of the 416 official units. 620px keeps
+   a little breathing room (comfortably covers everything up to the ~90th percentile) while cutting
+   most of that waste, which is what let squad print grow from 2 to 3 cards per page. The handful
+   of units with unusually long specialRules text (e.g. THE_FLATWOODS_MONSTER) can still run past
+   this and get clipped by `overflow:hidden` — a real tradeoff, not a regression, since they already
+   overflowed the original 685px too. card-render.js's fitSpecialRulesFontScale() now shrinks
+   .specialRules' font-size (down to a 0.6x floor) when specialIcons would otherwise be pushed past
+   this edge, which covers both long-but-not-extreme cases (e.g. MOTHMAN HATCHLING VENGEFUL's 5
+   rules) and genuinely huge blocks of rules text (e.g. THE_FLATWOODS_MONSTER, ~680 chars). Keep
+   printLiveCardHtml()'s matching 620 (index.html) in sync if this changes again. */
+.fww-live-card { width:450px; height:620px; position:relative; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.6);
+  font-family:BarlowCondensed, sans-serif; color:#222; font-size:15px;
+  /* almost everything on this card (frame, stripes, weathering) is a CSS background-image, not an
+     <img> — without this, browsers print those as blank white by default unless the user manually
+     ticks "background graphics" in the print dialog. Inherited, so one declaration covers it all. */
+  -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
+.fww-live-card, .fww-live-card * { -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
+.fww-live-card .brandedText{font-family:'HandelsonTwo',sans-serif!important;font-weight:400;font-size:1.6em;line-height:1em;padding:0 .1em;text-transform:uppercase}
+.fww-live-card .textShadow{text-shadow:.1em .1em rgba(0,0,0,.5)}
+
+.fww-live-card .wrap{background:url(frame/bg2.jpg) top left/cover repeat;width:100%;height:100%;display:flex;overflow:hidden;padding-bottom:20px;position:relative;}
+.fww-live-card .frame{position:absolute;top:0;bottom:0;right:0;left:0;
+  background:url(frame/header_top_left.png) 0px 0px no-repeat, url(frame/header_top.png) 0px 0px repeat-x;
+  z-index:1;pointer-events:none}
+
+/* .card-edge — 9-slice card border, 8 layers in one background (exact sizes/positions from source) */
+.fww-live-card .card-edge{position:absolute;top:0;right:0;left:0;bottom:0;opacity:.8;z-index:2;pointer-events:none;
+  background:
+    url(frame/overlay_top_left.png)     top left     / 100px 100px no-repeat,
+    url(frame/overlay_top_right.png)    top right    / 100px 100px no-repeat,
+    url(frame/overlay_bottom_left.png)  bottom left  / 100px 100px no-repeat,
+    url(frame/overlay_bottom_right.png) bottom right / 100px 100px no-repeat,
+    url(frame/overlay_left.png)         top left     / 40px 334px repeat-y,
+    url(frame/overlay_right.png)        top right    / 40px 334px repeat-y,
+    url(frame/overlay_top.png)          top left     / 243px 40px repeat-x,
+    url(frame/overlay_bottom.png)       bottom left  / 216px 40px repeat-x;}
+
+/* .scratches — weathering overlay, tiled across the whole card, sits ABOVE the portrait too.
+   Source CSS said opacity:.6, but at that strength the semi-transparent grime texture visibly
+   fogs every icon it paints over (confirmed by A/B toggling against a real card screenshot,
+   which shows crisp icon edges with no such halo) — dialled down to a subtle grain instead. */
+.fww-live-card .scratches{position:absolute;z-index:4;pointer-events:none;top:0;right:0;left:0;bottom:0;opacity:.15;
+  background:url(frame/scratches.png) top left repeat;}
+
+/* .center is intentionally NOT positioned (no z-index) — confirmed from the compiled source:
+   an unpositioned static block paints below any explicitly z-indexed sibling (.frame z:1, .thumbnail z:3),
+   which is exactly what lets the frame's ring show over the stat-row stripes and under the portrait. */
+.fww-live-card .center{margin:0;width:100%;padding-top:125px;}
+
+.fww-live-card .thumbnail{position:absolute;z-index:3;width:210px;height:250px;left:-33px;top:140px;overflow:hidden}
+.fww-live-card .thumbnail img{height:238px;width:238px;max-width:238px;display:block;
+  -webkit-mask-image:url(frame/mask.png);mask-image:url(frame/mask.png);
+  -webkit-mask-position:-18% 0;mask-position:-18% 0;-webkit-mask-size:289px;mask-size:289px}
+
+/* move/charge icons sit side by side (plain inline <img>, no display:block/margin-top stacking) */
+.fww-live-card .movement{position:absolute;top:93px;left:40px;z-index:5}
+.fww-live-card .movement img{width:36px;height:36px;}
+
+/* unitName then .type (icon AFTER the name) — confirmed real DOM: noFaction/hasType classes,
+   .unitFaction element is entirely absent (not just empty) when unit.factions is []. */
+.fww-live-card .unitTitle{line-height:46px;color:#f7df46;position:absolute;font-size:.85em;left:130px;top:70px;right:0;text-align:center;display:flex;align-items:center;z-index:5}
+.fww-live-card .unitTitle.hasFaction{line-height:19px;top:76px}
+.fww-live-card .unitTitle.hasType{padding-right:20px}
+.fww-live-card .unitTitle .unitName{min-width:0;flex:1 1 auto;padding:0 5px}
+.fww-live-card .unitTitle .unitFaction{display:block;color:#fff;text-transform:uppercase}
+.fww-live-card .unitTitle .type{flex:0 0 auto;line-height:2ex;padding-right:5px}
+.fww-live-card .unitTitle .type img{width:36px;height:36px}
+
+.fww-live-card .unique{position:absolute;width:36px;height:36px;left:40px;top:35px;z-index:5}
+
+/* topBarIcons: current-Health display via the fww-skill component — icon + numeric value span. */
+.fww-live-card .topBarIcons{position:absolute;right:70px;top:13px;z-index:11;display:flex;align-items:center}
+.fww-live-card .topBarIcons .skillDisplay{display:flex;align-items:center;margin:0 10px}
+.fww-live-card .topBarIcons .skillDisplay img{width:40px;height:40px;margin-right:5px}
+/* the confirmed source said color:#fff, but a direct screenshot from the live app shows this
+   number rendered dark (sampled ~rgb(8,3,3) on the real card), matching the card's base #222 —
+   overriding the source note with the photographic ground truth. */
+/* bumped from the source's 1em (15px) — at that size the number all but disappears in
+   black-and-white print (no color contrast to lean on, just thin regular-weight digits next
+   to a 40px icon); bold + ~2x size reads clearly on a printed page. */
+.fww-live-card .topBarIcons .skillDisplay span{display:block;font-size:2em;font-weight:700;color:#222}
+.fww-live-card .topBarIcons .skillDisplay span.boosted{color:#00a03e;font-weight:700}
+
+.fww-live-card .stats{position:relative;font-variant:small-caps}
+.fww-live-card .stats ul{margin:0 0 10px;padding:0;list-style:none}
+.fww-live-card .stats ul li{background:url(frame/list_even.jpg) top left repeat;padding:0 25px;display:flex;justify-content:flex-end;align-items:center;line-height:37px;min-height:37px}
+.fww-live-card .stats ul li:nth-child(2n){background-image:url(frame/list_odd.jpg)}
+.fww-live-card .stats ul li .skills{display:flex;justify-content:flex-end;align-items:center;flex:1 1 auto;position:relative;z-index:2}
+.fww-live-card .stats ul li .skills img.icon{width:28px;height:28px;margin-left:4px;vertical-align:middle}
+.fww-live-card .stats ul li .statName{margin-left:5px;flex:0 0 25px;position:relative;z-index:2}
+/* source said margin-left:2px, but a direct screenshot shows a visibly wider gap between the
+   stat name and its number — measured ~2.2% of card width on the real card vs ~0.8% here before. */
+.fww-live-card .stats ul li .statVal{margin-left:8px;flex:0 0 20px;position:relative;z-index:2}
+.fww-live-card .stats *{font-family:BarlowCondensed;font-size:1.1em}
+
+.fww-live-card .main{margin:0 30px;overflow:hidden}
+.fww-live-card .main *{font-family:BarlowCondensed;font-size:1.1em}
+.fww-live-card .main .specialRules{text-align:left;min-height:126px}
+.fww-live-card .main .specialRules p{margin:0 0 8px}
+/* real card: the icon fully replaces the tag's label — no leftover "Damage"/"Counting Token"
+   word after it — and the icon is sized close to the full text line-height, not a tiny subscript. */
+.fww-live-card .main .specialRules .inlineIcon{width:26px;height:26px;vertical-align:middle;margin:0 3px}
+.fww-live-card .main .specialIcons{display:flex;flex-wrap:wrap;align-items:center;position:relative;z-index:2}
+.fww-live-card .main .specialIcons img{width:30px;height:30px;margin:2px}
+.fww-live-card .main .right{float:right;flex:0 0 auto;margin:0 0 0 10px}
+.fww-live-card .main .right .sub{border:2px solid #3f7cb2;min-height:45px;border-radius:0 0 10px 10px}
+
+/* unit-armour component */
+.fww-live-card .armour{display:flex;flex-direction:column;justify-content:space-around;margin:0 0 10px;border:2px solid #d6433c;padding:5px 10px 5px 5px;list-style:none}
+.fww-live-card .armour li{list-style:none;display:flex;align-items:center;justify-content:space-around;white-space:nowrap}
+.fww-live-card .armour .icon{flex:0 0 36px!important;width:36px!important;height:36px!important;margin:0 10px 0 0}
+.fww-live-card .armour .hard{padding-left:5px}
+.fww-live-card .armour .hard .plus{position:relative;top:-3px}
+/* unit-armour is a separate component in the real app: ".main *{font-size:1.1em}" only ever
+   applies to it ONCE from outside, not recursively inside its own template. Our flat markup
+   has no such component boundary, so without this reset .armour li/span would double-compound
+   (19.965px instead of the real 18.15px). */
+.fww-live-card .armour *{font-size:1em}
+
+.fww-live-card .boosted{color:#00a03e;font-weight:700}
+.fww-live-card .lowered{color:#d6433c;font-weight:700}
