@@ -213,6 +213,49 @@
     busy(false);
   }
 
+  // ---------- gifts from the Master (inbox) ----------
+  // The GM's "send to player" writes into the player's inbox cell; every minute (and at login) the
+  // player's browser collects it into the warehouse and acknowledges, which empties the cell.
+  const DONE_KEY = 'homestead-inbox-done';
+  const loadDone = () => { try { return JSON.parse(localStorage.getItem(DONE_KEY) || '[]'); } catch (e) { return []; } };
+  function applyGift(entry) {
+    const st = curState(), got = [];
+    (entry.items || []).forEach(it => {
+      const idx = ITEMS_DB[it.idx] && ITEMS_DB[it.idx][2] === it.name ? it.idx : ITEMS_DB.findIndex(x => x[2] === it.name);
+      if (idx < 0) return;
+      const id = st.warehouse.nextInstId++;
+      st.warehouse.items[id] = global.makeItemInstance(id, idx, 'warehouse');
+      got.push(it.name);
+    });
+    return got;
+  }
+  async function checkInbox() {
+    if (!enabled() || !identity || isGuest() || document.hidden || saving) return;
+    try {
+      const res = await api({ action: 'inbox', name: identity.name, code: identity.code });
+      const entries = res.entries || [];
+      if (!entries.length) return;
+      const done = loadDone();
+      const got = [];
+      let from = '';
+      entries.filter(e => !done.includes(e.id)).forEach(e => { got.push(...applyGift(e)); from = e.from; done.push(e.id); });
+      if (got.length) {
+        try { localStorage.setItem(DONE_KEY, JSON.stringify(done.slice(-300))); } catch (e) { /* ok */ }
+        if (global.saveState) global.saveState();
+        if (global.render) global.render();
+        say('🎁 ' + (from || 'Мастер') + ' выдал вам: ' + got.join(', '));
+      }
+      await api({ action: 'ack', name: identity.name, code: identity.code, ids: entries.map(e => e.id) });
+    } catch (e) { /* offline / cold start: try again next minute */ }
+  }
+  let inboxTimer = null;
+  function startInboxPolling() {
+    if (inboxTimer) return;
+    inboxTimer = setInterval(checkInbox, 60000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkInbox(); });
+    checkInbox();
+  }
+
   // ---------- guest mode ----------
   function replaceLocalState(parsed) {
     suppress++; // applyLoadedState() calls saveState(); nothing here goes to the cloud
@@ -313,6 +356,7 @@
         refreshBar();
         if (global.render) global.render();
         say('Добро пожаловать, ' + name + (identity.isMaster ? ' ♛' : '') + '.');
+        startInboxPolling();
         if (res.hasSave) {
           if (!localHasContent() || confirm('В облаке есть сохранение от ' + fmtDate(res.updatedAt) + '.\nЗагрузить его? Текущее состояние в этом браузере будет заменено.\n(«Отмена» — оставить текущее: оно перезапишет облако.)')) loadFromCloud(true);
           else { identity.syncedAt = res.updatedAt; storeIdentity(); onChange(); } // deliberate choice to overwrite
@@ -366,11 +410,17 @@
     if (!enabled()) return;
     if (isGuest()) return; // stays a guest for this tab session (reloads included)
     if (!identity) { showLogin({ required: true }); return; }
+    startInboxPolling();
     // already known: quietly refresh the master flag (the sheet owner may have changed it)
     api({ action: 'login', name: identity.name, code: identity.code })
       .then(res => { if (!!res.isMaster !== !!identity.isMaster) { identity.isMaster = !!res.isMaster; storeIdentity(); refreshBar(); if (global.render) global.render(); } })
       .catch(() => { /* offline / cold start: keep the cached flag */ });
   }
 
-  global.FWWCloud = { init, canMaster, enabled, isGuest, onChange, saveToCloud, loadFromCloud, showLogin, refreshBar, splitState, mergeState };
+  // generic authenticated call for other modules (e.g. the Master's loot panel)
+  function request(action, extra) {
+    if (!enabled() || !identity) return Promise.reject(new Error('Нужно войти в облако.'));
+    return api(Object.assign({ action, name: identity.name, code: identity.code }, extra || {}));
+  }
+  global.FWWCloud = { init, canMaster, enabled, isGuest, isLoggedIn: () => !!identity, request, onChange, saveToCloud, loadFromCloud, showLogin, refreshBar, splitState, mergeState };
 })(window);

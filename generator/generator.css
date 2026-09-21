@@ -1,0 +1,17 @@
+/* Master tab unit generator — reuses the .cu-* dialog styles from live-card/custom-unit-editor.css */
+.gn-scroll{overflow-x:auto}
+.gn-grid{border-collapse:collapse;font-size:12px}
+.gn-grid th{padding:3px 6px;color:#6fae86;font-weight:normal;white-space:nowrap;text-align:center}
+.gn-grid tbody th, .gn-grid tr > th:first-child{text-align:right;color:var(--green)}
+.gn-grid td{padding:2px 4px;text-align:center;white-space:nowrap;color:#6fae86}
+.gn-grid td input{width:54px;padding:3px 2px;text-align:center}
+.gn-grid td.gn-na{color:#1d3d24}
+.gn-grid td.gn-off{opacity:.35}
+.gn-result{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.gn-result-main{flex:1 1 320px;min-width:280px}
+.gn-card{flex:0 0 auto;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.6)}
+.gn-static img{width:315px;display:block}
+.gn-unit{font-size:15px;color:var(--green);margin-bottom:6px}
+.gn-dim{color:#6fae86;font-size:12px}
+.gn-mod{color:var(--amber);margin-left:6px}
+.gn-total{margin:10px 0 4px;color:var(--amber);font-size:16px}

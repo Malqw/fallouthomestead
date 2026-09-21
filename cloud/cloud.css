@@ -42,6 +42,43 @@
 .cl-guest button:hover{border-color:#14f074;color:#14f074}
 
 /* header cloud bar (inside the top menu) */
+/* Master tab: random loot panel */
+.lt-panel{border:1px solid var(--panel-edge);padding:8px 12px;margin:0 0 14px;background:rgba(0,0,0,.2)}
+.lt-panel > summary{cursor:pointer;color:var(--amber);font-family:var(--disp);font-size:20px;letter-spacing:1px}
+.lt-body{margin-top:8px}
+.lt-label{margin:10px 0 4px;font-size:13px;color:var(--green)}
+.lt-label small{color:#6fae86}
+.lt-chips{display:flex;flex-wrap:wrap;gap:6px}
+.lt-chip{display:inline-block;margin:0!important;padding:3px 9px;border:1px solid var(--green-dim);cursor:pointer;font-size:12px;color:var(--text)!important;user-select:none}
+.lt-chip.on{background:var(--green);color:#03120a!important;border-color:var(--green)}
+.lt-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.lt-row label{margin:0;display:flex;align-items:center;gap:6px}
+.lt-row input[type=number]{width:70px}
+.lt-pool{color:#6fae86;font-size:12px}
+.lt-typechip{padding:3px 5px}
+.lt-typechip img{width:30px;height:30px;display:block;background:#dcd3b8;border-radius:50%}
+.lt-typechip.on img{outline:2px solid #03120a}
+.lt-weights{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.lt-weights .lt-label{flex:0 0 100%;margin:4px 0 0}
+.lt-w{margin:0;display:inline-flex;align-items:center;gap:5px;font-size:13px}
+.lt-w input{width:64px;padding:3px 4px}
+.lt-cards{margin-top:12px;display:flex;flex-wrap:wrap;gap:12px}
+.lt-tile{width:240px;display:flex;flex-direction:column;gap:4px;padding:6px;border:1px solid var(--panel-edge);background:rgba(0,0,0,.25)}
+.lt-cardimg{display:block;cursor:zoom-in}
+.lt-cardimg img{width:100%;height:auto;display:block;border-radius:3px}
+.lt-nocard{padding:18px 8px;text-align:center;color:var(--green);border:1px dashed var(--green-dim)}
+.lt-tile-line{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}
+.lt-tile button{margin:0 0 0 4px;padding:2px 8px;font-size:14px}
+.lt-results{margin-top:10px;display:flex;flex-direction:column;gap:4px}
+.lt-item{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 8px;border:1px solid var(--panel-edge)}
+.lt-name{flex:1 1 220px;color:var(--green)}
+.lt-cost{color:var(--amber)}
+.lt-meta{color:#6fae86;font-size:12px}
+.lt-item button{margin:0;padding:2px 8px;font-size:14px}
+.lt-send{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.lt-send select{width:auto;min-width:200px}
+.lt-send button{margin:0}
+
 #cloudBar{display:none;align-items:center;gap:6px;flex-wrap:wrap}
 #cloudBar .cl-who{color:var(--amber);font-size:13px;margin-right:2px}
 #cloudBar button{margin:0;font-size:14px;padding:4px 8px}
