@@ -64,7 +64,10 @@
   "Deacon": "RR-DEACON",
   "Deathclaw": "CREATURES-DEATHCLAW",
   "Deathclaw Matriarch I": "CREATURES-DEATHCLAW_MATRIARCH_I",
-  "Deathclaw Matriarch I+II": null,
+  "Deathclaw Matriarch I+II": [
+    "CREATURES-DEATHCLAW_MATRIARCH_I",
+    "CREATURES-DEATHCLAW_MATRIARCH_II"
+  ],
   "Deathclaw Matriarch II": "CREATURES-DEATHCLAW_MATRIARCH_II",
   "Deidre": "SURV-DIEDRE",
   "Desdemona": "RR-DESDEMONA",
@@ -116,11 +119,24 @@
   "Follower of the Apocalypse(Free Tech)": null,
   "Forged": "RAID-FORGED",
   "Frank Horrigan I": "ENC-FRANK_HORRIGAN_I",
-  "Frank Horrigan I+II": null,
-  "Frank Horrigan I+II+III": null,
-  "Frank Horrigan I+III": null,
+  "Frank Horrigan I+II": [
+    "ENC-FRANK_HORRIGAN_I",
+    "ENC-FRANK_HORRIGAN_II"
+  ],
+  "Frank Horrigan I+II+III": [
+    "ENC-FRANK_HORRIGAN_I",
+    "ENC-FRANK_HORRIGAN_II",
+    "ENC-FRANK_HORRIGAN_III"
+  ],
+  "Frank Horrigan I+III": [
+    "ENC-FRANK_HORRIGAN_I",
+    "ENC-FRANK_HORRIGAN_III"
+  ],
   "Frank Horrigan II": "ENC-FRANK_HORRIGAN_II",
-  "Frank Horrigan II+III": null,
+  "Frank Horrigan II+III": [
+    "ENC-FRANK_HORRIGAN_II",
+    "ENC-FRANK_HORRIGAN_III"
+  ],
   "Frank Horrigan III": "ENC-FRANK_HORRIGAN_III",
   "Free Tech": "SURV-FREE_TECH",
   "Gage": "RAID-GAGE",
@@ -226,7 +242,7 @@
   "NCR Trooper": "NCR-NCR_TROOPER",
   "NCR Trooper MP": "NCR-NCR_TROOPER_MP",
   "NCR Veteran Ranger": "NCR-NCR_VETERAN_RANGER",
-  "NIRA": null,
+  "NIRA": "NIRA",
   "Nick Valentine": "SURV-NICK_VALENTINE",
   "Nightkin": "SM-NIGHTKIN",
   "Nuka-Girl": "SURV-NUKA-GIRL",
@@ -360,7 +376,10 @@
   "Suicider": "SM-SUICIDER",
   "Super Mutant": "SM-SUPER_MUTANT",
   "Swan I": "SM-SWAN_I",
-  "Swan I+II": null,
+  "Swan I+II": [
+    "SM-SWAN_I",
+    "SM-SWAN_II"
+  ],
   "Swan II": "SM-SWAN_II",
   "Tabitha": "SM-TABITHA",
   "Tesla Soldier": "ENC-TESLA_SOLDIER",

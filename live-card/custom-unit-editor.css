@@ -1,0 +1,81 @@
+/* Custom-unit editor (Master tab) — a full-screen dialog with the form on the left and a live
+   card preview on the right. Styled with the host app's own CSS variables (see index.html :root). */
+.cu-overlay{position:fixed;inset:0;z-index:1050;background:rgba(3,18,10,.92);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 12px}
+.cu-dialog{background:var(--panel);border:1px solid var(--green-dim);width:min(1100px,100%);padding:16px 18px;color:var(--text);font-family:var(--mono)}
+.cu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.cu-head h2{margin:0;font-family:var(--disp);font-size:24px;color:var(--amber);letter-spacing:1px;font-weight:normal}
+.cu-body{display:flex;gap:20px;align-items:flex-start}
+.cu-form{flex:1 1 auto;min-width:0}
+.cu-preview{flex:0 0 auto;position:sticky;top:0}
+.cu-preview-box{width:450px;height:620px;overflow:hidden}
+.cu-preview-box > .cu-preview-inner{width:450px;transform-origin:top left}
+.cu-sec{border:1px solid var(--panel-edge);padding:8px 10px 10px;margin:0 0 12px}
+.cu-sec > .cu-sec-title{font-family:var(--disp);font-size:18px;color:var(--green);letter-spacing:1px;margin-bottom:6px}
+.cu-sec label{display:block;margin-top:6px;font-size:12px;color:#6fae86}
+.cu-row{display:flex;gap:10px;flex-wrap:wrap}
+.cu-row > div{flex:1 1 130px;min-width:110px}
+.cu-form textarea{width:100%;min-height:84px;resize:vertical;background:#03120a;border:1px solid var(--green-dim);color:var(--green);font-family:var(--mono);font-size:16px;line-height:1.4;padding:5px 6px;border-radius:2px}
+.cu-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.cu-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--green-dim);padding:3px 8px 3px 5px;cursor:pointer;font-size:12px;margin:0!important;color:var(--text)!important;user-select:none}
+.cu-chip img{width:22px;height:22px}
+/* clicks must land on the label (which toggles the state itself) — a click on the bare checkbox would be
+   preventDefault'ed and the browser would then restore its old checked state, leaving it out of sync */
+.cu-chip input{margin:0!important;pointer-events:none}
+.cu-chip.on{background:var(--green);color:#03120a!important;border-color:var(--green)}
+.cu-icon-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--green-dim);background:#03120a;padding:3px 8px 3px 4px;cursor:pointer;font-size:12px;color:var(--text);margin:0;border-radius:2px;font-family:var(--mono);letter-spacing:0;min-height:0}
+.cu-icon-btn img{width:26px;height:26px;background:#dcd3b8;border-radius:50%}
+.cu-icon-btn.on{border-color:var(--green);background:#0f3d20;color:var(--green)}
+.cu-icon-btn:hover{background:#0f3d20;color:var(--green)}
+.cu-stats{display:grid;grid-template-columns:repeat(7,minmax(46px,1fr));gap:6px}
+.cu-stats label{text-align:center;margin-top:0}
+.cu-stats input{text-align:center;padding-left:2px;padding-right:2px}
+.cu-skills{display:grid;grid-template-columns:1fr auto auto;gap:6px 8px;align-items:center}
+.cu-skills .cu-skill-name{display:flex;align-items:center;gap:6px;font-size:13px}
+.cu-skills .cu-skill-name img{width:22px;height:22px;background:#dcd3b8;border-radius:50%}
+.cu-skills select{width:auto;min-width:62px}
+.cu-rule{display:flex;gap:6px;align-items:flex-start;margin-top:6px}
+.cu-rule textarea{flex:1}
+.cu-img-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.cu-img-thumb{width:84px;height:84px;border:1px dashed var(--green-dim);display:flex;align-items:center;justify-content:center;font-size:11px;color:#6fae86;overflow:hidden;background:#03120a}
+.cu-img-thumb img{width:100%;height:100%;object-fit:cover}
+.cu-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap}
+.cu-err{color:var(--red);font-size:12px;margin-top:6px;min-height:16px}
+@media (max-width:900px){
+  .cu-body{flex-direction:column}
+  .cu-preview{position:static;align-self:center;order:-1}
+  .cu-skills{grid-template-columns:1fr auto}
+  .cu-skills .cu-skill-colour{grid-column:2}
+}
+
+/* quick stat-override block on a Master NPC card */
+.stat-ov{margin:8px 0}
+.stat-ov summary{cursor:pointer;color:var(--amber);font-size:13px}
+.stat-ov-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:6px}
+.stat-ov-grid.armour{grid-template-columns:repeat(3,1fr)}
+.stat-ov-grid label{text-align:center;margin:0!important;font-size:11px}
+.stat-ov-grid input{text-align:center;padding-left:2px;padding-right:2px}
+.stat-ov-grid input.cu-changed{border-color:var(--amber);color:var(--amber)}
+
+/* portrait picker (opens above the editor) */
+.cu-picker{z-index:1060}
+.cu-picker .cu-dialog{width:min(900px,100%)}
+.cu-picker input[type=text]{margin-bottom:4px}
+.cu-pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;margin-top:10px}
+.cu-ptile{display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px;margin:0;background:#03120a;border:1px solid var(--green-dim);cursor:pointer;color:var(--text);font-family:var(--mono);font-size:11px;letter-spacing:0;min-height:0;line-height:1.2}
+.cu-ptile img{width:100px;height:100px;object-fit:contain;background:#dcd3b8}
+.cu-ptile:hover{border-color:var(--green);background:#0f3d20;color:var(--green)}
+.cu-ptile span{max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+
+/* picker of [[icon]] codes under the rule boxes */
+.cu-ipanel{margin:8px 0 6px;border:1px solid var(--panel-edge);padding:6px 8px}
+.cu-ipanel > summary{cursor:pointer;color:var(--green);font-size:14px;user-select:none}
+.cu-ipanel[open] > summary{margin-bottom:6px}
+.cu-ipanel input[type=text]{width:100%;margin:4px 0}
+.cu-istatus{min-height:16px;font-size:12px;color:var(--amber);margin-bottom:4px;word-break:break-all}
+.cu-igrid{display:flex;flex-wrap:wrap;gap:4px;max-height:260px;overflow-y:auto;padding-right:4px}
+.cu-igroup{flex:0 0 100%;font-family:var(--disp);font-size:16px;color:var(--green);margin:6px 0 2px;letter-spacing:1px}
+.cu-igrid > .hint{flex:0 0 100%}
+.cu-itile{display:flex;flex-direction:column;align-items:center;gap:2px;width:78px;padding:4px 2px;border:1px solid var(--green-dim);background:#03120a;cursor:pointer;color:var(--text);font-family:var(--mono);font-size:10px;letter-spacing:0;min-height:0;line-height:1.15;border-radius:2px}
+.cu-itile img{width:38px;height:38px;object-fit:contain;background:#dcd3b8;border-radius:50%}
+.cu-itile span{max-width:100%;word-break:break-all;text-align:center}
+.cu-itile:hover{border-color:var(--green);background:#0f3d20;color:var(--green)}

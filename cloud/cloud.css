@@ -1,0 +1,52 @@
+/* Login screen + cloud bar. Look borrowed from the theme-park.dev Fallout login theme:
+   phosphor-green monospace on near-black, CRT scanlines, glow, vignette. Uses the host page's
+   CSS variables (--green, --green-dim, --amber, --red, --mono, --disp). */
+.cl-overlay{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;
+  background:
+    radial-gradient(ellipse at center, rgba(20,240,116,.10) 0%, rgba(5,16,10,.92) 60%, #010603 100%),
+    repeating-linear-gradient(90deg, rgba(20,240,116,.035) 0 1px, transparent 1px 48px),
+    repeating-linear-gradient(0deg, rgba(20,240,116,.035) 0 1px, transparent 1px 48px),
+    #03100a;
+  font-family:var(--mono);color:var(--green)}
+/* scanlines + slow flicker over everything on the screen */
+.cl-crt{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 1px, transparent 1px 3px);
+  box-shadow:inset 0 0 160px rgba(0,0,0,.85);animation:cl-flicker 5s infinite}
+@keyframes cl-flicker{0%,100%{opacity:.9}47%{opacity:.9}48%{opacity:.7}50%{opacity:.95}}
+.cl-box{position:relative;width:min(440px,100%);padding:26px 28px 22px;
+  background:rgba(0,0,0,.55);border:2px solid #14f074;border-radius:4px;
+  box-shadow:0 0 22px rgba(20,240,116,.35), inset 0 0 30px rgba(20,240,116,.08);
+  text-shadow:0 0 6px rgba(20,240,116,.6)}
+.cl-logo{font-family:var(--disp);font-size:44px;line-height:1;letter-spacing:3px;color:#14f074;text-align:center}
+.cl-title{font-family:var(--disp);font-size:20px;letter-spacing:2px;text-align:center;color:var(--amber);margin:2px 0 14px;text-shadow:0 0 6px rgba(255,180,84,.5)}
+.cl-tabs{display:flex;gap:6px;margin-bottom:10px}
+.cl-tabs button{flex:1;margin:0;font-family:var(--disp);font-size:18px;letter-spacing:2px;padding:5px 6px;background:transparent;
+  border:1px solid #0c833d;color:#0c833d;cursor:pointer;border-radius:2px;text-shadow:none}
+.cl-tabs button.on{border-color:#14f074;color:#03120a;background:#14f074;text-shadow:none}
+.cl-boot{min-height:42px;white-space:pre-wrap;font-size:12px;line-height:1.5;color:#0c833d;margin-bottom:8px;text-shadow:none}
+.cl-box label{display:block;margin:10px 0 3px;font-size:12px;letter-spacing:1px;color:#14f074}
+.cl-box input[type=text]{width:100%;background:rgba(0,0,0,.6);border:1px solid #0c833d;color:#14f074;font-family:var(--mono);
+  font-size:18px;padding:8px 10px;border-radius:2px;outline:none;caret-color:#14f074;text-shadow:0 0 6px rgba(20,240,116,.6)}
+.cl-box input[type=text]:focus{border-color:#14f074;box-shadow:0 0 12px rgba(20,240,116,.45)}
+.cl-hint{margin-top:10px;font-size:11px;line-height:1.5;color:#0c833d;text-shadow:none}
+.cl-err{min-height:18px;margin-top:8px;font-size:13px;color:var(--red);text-shadow:0 0 6px rgba(255,93,93,.5)}
+.cl-actions{display:flex;gap:10px;margin-top:6px}
+.cl-actions button{flex:1;margin:0;font-family:var(--disp);font-size:22px;letter-spacing:2px;padding:8px 10px;background:transparent;
+  border:1px solid #14f074;color:#14f074;cursor:pointer;text-shadow:0 0 6px rgba(20,240,116,.6);border-radius:2px}
+.cl-actions button:hover:not(:disabled){background:#14f074;color:#03120a;text-shadow:none;box-shadow:0 0 16px rgba(20,240,116,.6)}
+.cl-actions button:disabled{opacity:.4;cursor:wait}
+.cl-actions .cl-ghost{border-color:#0c833d;color:#0c833d;flex:0 0 auto}
+.cl-guest{margin-top:14px;padding-top:12px;border-top:1px dashed #0c833d}
+.cl-guest button{width:100%;margin:0;font-family:var(--disp);font-size:18px;letter-spacing:2px;padding:6px 10px;background:transparent;
+  border:1px solid #0c833d;color:#0c833d;cursor:pointer;border-radius:2px;text-shadow:none}
+.cl-guest button:hover{border-color:#14f074;color:#14f074}
+
+/* header cloud bar (inside the top menu) */
+#cloudBar{display:none;align-items:center;gap:6px;flex-wrap:wrap}
+#cloudBar .cl-who{color:var(--amber);font-size:13px;margin-right:2px}
+#cloudBar button{margin:0;font-size:14px;padding:4px 8px}
+#cloudBar .cl-status{font-size:12px;color:var(--green-dim)}
+#cloudBar .cl-status.ok{color:var(--green)}
+#cloudBar .cl-status.pending,#cloudBar .cl-status.saving{color:var(--amber)}
+#cloudBar .cl-status.warn{color:var(--red)}
+.cl-actions button small{font-size:12px;letter-spacing:0;opacity:.8}

@@ -115,7 +115,9 @@
 .fww-live-card .main .specialIcons{display:flex;flex-wrap:wrap;align-items:center;position:relative;z-index:2}
 .fww-live-card .main .specialIcons img{width:30px;height:30px;margin:2px}
 .fww-live-card .main .right{float:right;flex:0 0 auto;margin:0 0 0 10px}
-.fww-live-card .main .right .sub{border:2px solid #3f7cb2;min-height:45px;border-radius:0 0 10px 10px}
+.fww-live-card .main .right .sub{border:2px solid #3f7cb2;min-height:45px;border-radius:0 0 10px 10px;display:flex;align-items:center;justify-content:center}
+/* unit price — .main * compounds font-size per nesting level, so the size is set explicitly here */
+.fww-live-card .main .right .sub .cost{font-size:1.7em;font-weight:700;color:#222;line-height:1}
 
 /* unit-armour component */
 .fww-live-card .armour{display:flex;flex-direction:column;justify-content:space-around;margin:0 0 10px;border:2px solid #d6433c;padding:5px 10px 5px 5px;list-style:none}

@@ -46,8 +46,9 @@
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 
   function parseTags(text) {
-    return text.replace(/\[\[([a-z0-9_]+)(?:\|([^\]]*))?\]\]/gi, (m, icon, label) =>
-      `<img class="inlineIcon" src="${global.__fwwAssetBase}icons/${icon}.png" alt="${esc(label || icon)}" title="${esc(label || icon)}">`);
+    // icon may live in a subfolder (e.g. "status-selectors/crit"), hence "/" and "-"
+    return text.replace(/\[\[([a-z0-9_\-\/]+)(?:\|([^\]]*))?\]\]/gi, (m, icon, label) =>
+      `<img class="inlineIcon" src="${global.__fwwAssetBase}icons/${icon.replace(/^\/+/, '')}.png" alt="${esc(label || icon)}" title="${esc(label || icon)}">`);
   }
 
   function iconsForStat(derivedSkills, statLetter) {
@@ -87,13 +88,18 @@
   // Floor is 0.6 (down from an initial 0.7): THE FLATWOODS MONSTER's ~680-char MIND CONTROL rule
   // still clipped specialIcons at 0.7 (only the tops of the icons were visible) — measured live,
   // 0.65 is the first step that actually clears the budget, 0.6 keeps a bit of margin over that.
-  function fitSpecialRulesFontScale(cardHtml, doc) {
-    if (!doc || !doc.body) return 1;
+  // allowGrow (custom units only): before shrinking any text, let the card itself grow taller — up
+  // to MAX_GROW_H — so a hand-written rules block stays at the same 18px as every other card.
+  // Official cards keep the fixed 620px (print packs 3 per page around it). Returns
+  // {scale, height}; height is the card's final px height (620 unless it grew).
+  const BASE_H = 620, MAX_GROW_H = 900;
+  function fitSpecialRulesFontScale(cardHtml, doc, allowGrow) {
+    if (!doc || !doc.body) return { scale: 1, height: BASE_H };
     const host = doc.createElement('div');
     host.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;';
     host.innerHTML = cardHtml;
     doc.body.appendChild(host);
-    let scale = 1;
+    let scale = 1, height = BASE_H;
     try {
       const card = host.querySelector('.fww-live-card');
       const wrap = host.querySelector('.wrap');
@@ -102,7 +108,12 @@
       if (card && wrap && rules && icons) {
         wrap.style.overflow = 'visible'; // bypass the by-design clip for measurement only
         const cardTop = card.getBoundingClientRect().top;
-        const budget = card.clientHeight - 4; // small safety margin below the hard 620px edge
+        if (allowGrow) {
+          // .wrap keeps 20px of padding below its content — the card must end that far below the icons
+          const needed = Math.ceil(icons.getBoundingClientRect().bottom - cardTop) + 20;
+          height = Math.min(MAX_GROW_H, Math.max(BASE_H, needed));
+        }
+        const budget = height - 4; // small safety margin below the card's hard bottom edge
         for (; scale > 0.6; scale = +(scale - 0.05).toFixed(2)) {
           rules.style.fontSize = (1.1 * scale).toFixed(3) + 'em';
           if (icons.getBoundingClientRect().bottom - cardTop <= budget) break;
@@ -111,12 +122,15 @@
     } finally {
       doc.body.removeChild(host);
     }
-    return scale;
+    return { scale, height };
   }
 
   // unitTemplate: an fww_unit_templates.json entry. equippedItems: fww_equipment.json entries
   // (already resolved via FWWBridge). Returns an HTML string for one card.
-  function buildCardHtml(unitTemplate, equippedItems, assetBase) {
+  // opts.cost: the unit's price in caps, printed in the empty blue box under the armour (where the
+  // old static card art had a blank slot for it)
+  function buildCardHtml(unitTemplate, equippedItems, assetBase, opts) {
+    opts = opts || {};
     assetBase = assetBase || '';
     global.__fwwAssetBase = assetBase; // parseTags() reads this — simplest way to thread it through String.replace's callback
     const icons = assetBase + 'icons/';
@@ -172,6 +186,10 @@
     const specialIconsRow = [unitTemplate.awarenessIcon, ...(unitTemplate.specialIcons || [])]
       .filter(Boolean).map(ic => `<img src="${icons}${ic}.png" title="${esc(ic)}">`).join('');
     const name = unitTemplate.name.en;
+    // official portraits are bare filenames under portraits/; a user-made custom unit stores its
+    // picture inline as a data: URL (see custom-unit-editor.js) — used as-is.
+    const image = unitTemplate.image || '';
+    const portraitSrc = !image ? '' : /^(data:|blob:|https?:)/i.test(image) ? image : portraits + image;
     const nameFontSize = nameFontSizeEm(name, iconCount);
 
     const html = `
@@ -187,7 +205,7 @@
             <span class="${healthCls}">${healthVal == null ? '-' : healthVal}</span>
           </span>
         </div>
-        <div class="thumbnail"><img src="${portraits}${unitTemplate.image}" alt="${esc(name)}"></div>
+        <div class="thumbnail">${portraitSrc ? `<img src="${esc(portraitSrc).replace(/"/g, '&quot;')}" alt="${esc(name)}">` : ''}</div>
         <div class="top">
           <div class="movement">
             <img src="${icons}${moveIcon}.png" class="move" alt="${esc(unitTemplate.move.main)}">
@@ -203,7 +221,7 @@
           <div class="main">
             <div class="right">
               <ul class="armour">${armourRows}</ul>
-              <div class="sub"></div>
+              <div class="sub">${opts.cost == null ? '' : `<span class="cost">${esc(opts.cost)}</span>`}</div>
             </div>
             <div class="specialRules">${(unitTemplate.specialRules || []).map(p => `<p>${parseTags(p)}</p>`).join('')}</div>
             <div class="specialIcons">${specialIconsRow}</div>
@@ -212,10 +230,13 @@
       </div>
     </div>`;
 
-    const rulesScale = fitSpecialRulesFontScale(html, global.document);
-    if (rulesScale >= 1) return html;
-    return html.replace('<div class="specialRules">', `<div class="specialRules" style="font-size:${(1.1 * rulesScale).toFixed(3)}em">`);
+    const fit = fitSpecialRulesFontScale(html, global.document, !!unitTemplate._growToFit);
+    let out = html;
+    if (fit.scale < 1) out = out.replace('<div class="specialRules">', `<div class="specialRules" style="font-size:${(1.1 * fit.scale).toFixed(3)}em">`);
+    // data-card-h lets callers (print scaling, preview) know the real height without re-measuring
+    if (fit.height !== BASE_H) out = out.replace('<div class="fww-live-card">', `<div class="fww-live-card" data-card-h="${fit.height}" style="height:${fit.height}px">`);
+    return out;
   }
 
-  global.FWWCardRender = { buildCardHtml };
+  global.FWWCardRender = { buildCardHtml, FACTION_SUBTITLES };
 })(typeof window !== 'undefined' ? window : globalThis);
