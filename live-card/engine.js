@@ -27,7 +27,11 @@
   // undamaged; pass {..., _damaged:true} on the item to select the damaged variant), and
   // pass through anything else (permanent/diminishing) untouched.
   function selectableMods(item) {
-    const mods = item.mod || [];
+    // Chems/drinks carry "diminishing" (a temporary per-use boost) and "addicted" (a penalty that
+    // only exists once the unit is actually addicted) mods. Merely HOLDING the item must change
+    // nothing, so neither is ever applied here — an addiction is applied explicitly by the host
+    // (index.html adds a synthetic "permanent" item for the unit's chosen addiction).
+    const mods = (item.mod || []).filter(m => m.type !== 'diminishing' && m.type !== 'addicted');
     const hasConditionVariants = mods.some(m => m.type === 'undamaged' || m.type === 'damaged');
     if (!hasConditionVariants) return mods;
     const wantType = item._damaged ? 'damaged' : 'undamaged';

@@ -2300,12 +2300,108 @@ function liveCardBtnHtml(member, unitName){
 // official equipment entries via FWWBridge, cloning in the Power Armor damaged/undamaged
 // condition per-instance (never mutating the shared FWWBridge-cached object).
 function liveEquippedItemsForMember(member){
-  return itemsHeldBy(member.id).map(inst=>{
+  const list = itemsHeldBy(member.id).map(inst=>{
     const row = ITEMS_DB[inst.itemIdx];
     const official = row && FWWBridge.getOfficialItem(row[2]);
     if(!official) return null;
     return inst.paCondition === 'Damaged' ? { ...official, _damaged: true } : official;
   }).filter(Boolean);
+  // The unit's Addiction (Squad tab) is the only way a chem/drink's "addicted" penalty reaches the card —
+  // merely carrying the substance does nothing (see selectableMods in live-card/engine.js).
+  memberAddictions(member).forEach(name=>{
+    const ad = addictionMod(name);
+    if(ad) list.push({ name: 'ADDICTION', type: 'Addiction', mod: [{ ...ad.mod, type: 'permanent' }] });
+  });
+  return list;
+}
+// ---- Addiction: pick a chem/drink; its official "addicted" mod then applies to the unit's card ----
+// Substances that can be an addiction = ITEMS_DB Chem/Alcohol rows whose official card has an "addicted" mod.
+function addictionCatalog(){
+  if(!(window.FWWBridge && FWWBridge.isReady && FWWBridge.isReady())) return [];
+  const seen = new Set(), out = [];
+  ITEMS_DB.forEach(it=>{
+    if(it[1] !== 'Chem' && it[1] !== 'Alcohol') return;
+    const key = it[2].toLowerCase();
+    if(seen.has(key)) return;
+    const mod = addictionModOfItem(it[2]);
+    if(!mod) return;
+    seen.add(key);
+    out.push({ name: it[2], mod });
+  });
+  return out.sort((a,b)=>a.name.localeCompare(b.name));
+}
+function addictionModOfItem(itemName){
+  const official = FWWBridge.getOfficialItem(itemName);
+  return official && (official.mod||[]).find(m=>m.type==='addicted') || null;
+}
+// A unit can have any number of DIFFERENT addictions: member.addictions = [substance name, ...]. Older saves
+// have a single free-text member.addiction — converted lazily (needs the official data loaded): a text that
+// matches a known substance (case-insensitively) becomes a real addiction, anything else stays as a legacy
+// note that has no effect until the GM removes it or picks the substance from the list.
+function addictionMod(value){
+  const v = String(value||'').trim().toLowerCase();
+  if(!v || !(window.FWWBridge && FWWBridge.isReady && FWWBridge.isReady())) return null;
+  const row = ITEMS_DB.find(it=>(it[1]==='Chem'||it[1]==='Alcohol') && it[2].toLowerCase()===v && addictionModOfItem(it[2]));
+  return row ? { name: row[2], mod: addictionModOfItem(row[2]) } : null;
+}
+function memberAddictions(m){
+  if(!Array.isArray(m.addictions)){
+    const v = String(m.addiction||'').trim();
+    if(!v){ m.addictions = []; }
+    else if(!(window.FWWBridge && FWWBridge.isReady && FWWBridge.isReady())) return [];
+    else {
+      const k = addictionMod(v);
+      m.addictions = k ? [k.name] : [];
+      if(k) m.addiction = '';
+    }
+  }
+  return m.addictions;
+}
+function addAddiction(memberId, name){
+  const m = getMember(memberId);
+  if(!m || !name) return;
+  const list = memberAddictions(m);
+  if(list.some(x=>x.toLowerCase()===name.toLowerCase())){ toast('Эта зависимость у бойца уже есть.', true); return; }
+  list.push(name);
+  saveState(); render();
+}
+function removeAddiction(memberId, pos){
+  const m = getMember(memberId);
+  if(!m) return;
+  memberAddictions(m).splice(pos, 1);
+  saveState(); render();
+}
+function clearLegacyAddiction(memberId){
+  const m = getMember(memberId);
+  if(!m) return;
+  m.addiction = '';
+  saveState(); render();
+}
+function describeAddiction(mod){
+  const SN = { S:'Str', P:'Per', E:'End', C:'Cha', I:'Int', A:'Agi', L:'Luc' }, parts = [];
+  Object.entries(mod.stats||{}).forEach(([k,v])=>{ if(v) parts.push(SN[k]+' '+(v>0?'+':'−')+Math.abs(v)); });
+  const am = (mod.armour||{}).mod || {};
+  Object.entries(am).forEach(([k,v])=>{ if(v) parts.push('броня '+k+' '+(v>0?'+':'−')+Math.abs(v)); });
+  return parts.join(', ') || 'без изменения характеристик';
+}
+function addictionFieldHtml(m){
+  const cat = addictionCatalog();
+  const mine = memberAddictions(m);
+  const esc = s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  const chips = mine.map((name,pos)=>{
+    const k = addictionMod(name);
+    return `<span class="tag" style="border-color:var(--red);">${esc(name)}${k ? ` <small style="color:var(--red);">${esc(describeAddiction(k.mod))}</small>` : ''} <b data-removeaddiction="${m.id}" data-pos="${pos}">✕</b></span>`;
+  }).join('');
+  const legacy = String(m.addiction||'').trim();
+  const legacyChip = legacy ? `<span class="tag" style="opacity:.7;" title="Старая запись в свободном виде — без эффекта на карточке">${esc(legacy)} (старый текст) <b data-clearaddiction="${m.id}">✕</b></span>` : '';
+  const taken = new Set(mine.map(x=>x.toLowerCase()));
+  const opts = `<option value="">— добавить зависимость —</option>` +
+    cat.filter(c=>!taken.has(c.name.toLowerCase())).map(c=>`<option value="${esc(c.name)}">${esc(c.name)} — ${esc(describeAddiction(c.mod))}</option>`).join('');
+  return `<label>Addiction</label>
+      <div class="tag-list">${chips}${legacyChip}${(!chips && !legacyChip) ? '<span class="small-note">нет</span>' : ''}</div>
+      <div class="combo">
+        <select class="combo-native combo-enhance" data-combo-mode="action" data-combo-placeholder="Добавить зависимость…" data-addaddiction="${m.id}">${opts}</select>
+      </div>`;
 }
 // Print-page version of the live card: same buildCardHtml() output as the lightbox, scaled down
 // (via CSS transform, since the card's internals are absolutely positioned at a fixed 450x620
@@ -4785,8 +4881,7 @@ function renderSquadView(){
         <div><label>Radiation Damage</label><input type="number" min="0" data-field="radiation" data-member="${m.id}" value="${m.radiation||0}"></div>
       </div>
 
-      <label>Addiction</label>
-      <input type="text" data-field="addiction" data-member="${m.id}" value="${(m.addiction||'').replace(/"/g,'&quot;')}" placeholder="напр. Jet">
+      ${addictionFieldHtml(m)}
 
       <label>Fate</label>
       <select data-field="fate" data-member="${m.id}">
@@ -4964,6 +5059,15 @@ function attachSquadEvents(){
   });
   wrap.querySelectorAll('[data-removeitem]').forEach(b=>{
     b.onclick = ()=> returnItemToWarehouse(Number(b.dataset.removeitem));
+  });
+  wrap.querySelectorAll('[data-addaddiction]').forEach(sel=>{
+    sel.onchange = e=>{ if(e.target.value) addAddiction(Number(sel.dataset.addaddiction), e.target.value); };
+  });
+  wrap.querySelectorAll('[data-removeaddiction]').forEach(b=>{
+    b.onclick = ()=> removeAddiction(Number(b.dataset.removeaddiction), Number(b.dataset.pos));
+  });
+  wrap.querySelectorAll('[data-clearaddiction]').forEach(b=>{
+    b.onclick = ()=> clearLegacyAddiction(Number(b.dataset.clearaddiction));
   });
   wrap.querySelectorAll('[data-addmembermod]').forEach(sel=>{
     sel.onchange = (e)=>{
